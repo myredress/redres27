@@ -2494,6 +2494,8 @@ function sendToZoho(email, name, resultUrl){
 
   const formData = new FormData();
   formData.append('Email', email);
+
+  
   formData.append('SingleLine', name);           // Campo "Nombre"
   formData.append('SingleLine1', resultUrl);     // Campo "Link de resultado"
   formData.append('SingleLine2', 'test_redress27_paid');  // Tag para automatización
@@ -2606,7 +2608,9 @@ function unlockResult(){
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
   // window.location.href = 'https://checkout.square.site/TU_LINK'
-  window.location.href = 'https://square.link/u/dJiHh0f1'
+  
+  // PRODUCCIÓN square index.html
+  //window.location.href = 'https://square.link/u/dJiHh0f1'
      + '?ref=' + encodeURIComponent(uName)
      + '&return_url=' + encodeURIComponent(returnUrl);
 
