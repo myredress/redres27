@@ -2488,7 +2488,9 @@ function parseResultToken(token){
 function sendToZoho(email, name, resultUrl){
   // ZOHO CAMPAIGNS — Web Signup Form API
   // Reemplaza TU_FORM_ID y TU_ZOHO_ACCOUNT con tus datos reales de Zoho
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
+  // 20-04-2026 original const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
+
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
 
   const formData = new FormData();
   formData.append('Email', email);
@@ -2604,8 +2606,11 @@ function unlockResult(){
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
   // window.location.href = 'https://checkout.square.site/TU_LINK'
-  //   + '?ref=' + encodeURIComponent(uName)
-  //   + '&return_url=' + encodeURIComponent(returnUrl);
+  
+  // PRODUCCIÓN square index.html
+  window.location.href = 'https://square.link/u/dJiHh0f1'
+     + '?ref=' + encodeURIComponent(uName)
+     + '&return_url=' + encodeURIComponent(returnUrl);
 
   // DEMO: mostrar resultado directamente
   buildFullResult();
