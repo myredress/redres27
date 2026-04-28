@@ -1906,6 +1906,8 @@ let qIdx=-1, answers={}, uName='', uHeight='';
 
 function startQ(){
 
+  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
+
   uName=document.getElementById('uName').value.trim()||t('Tú','You');
   uHeight=document.getElementById('uHeight').value.trim();
   qIdx=0; goTo('question'); renderQ(); setPct(12);
@@ -2591,6 +2593,8 @@ window.addEventListener('DOMContentLoaded', checkUrlToken);
 // ════════════════════════════════════════
 function processResult(){
   // Ir a captura de email antes del procesamiento
+
+  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
   goTo('email-capture'); setPct(75);
 }
 
@@ -2635,6 +2639,8 @@ function unlockResult(){
 // BUILD FULL RESULT
 // ════════════════════════════════════════
 function buildFullResult(){
+
+  fbq('track', 'Purchase', {value: 1.00, currency: 'USD'});
 
 
   const {S,variant,varLabel,sec,secLabel}=window._d;
