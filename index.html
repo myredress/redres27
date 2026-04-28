@@ -763,18 +763,6 @@ footer {
   .pw-grid { grid-template-columns:1fr; }
 }
 </style>
-
-<script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function()
-{n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
-t=b.createElement(e);t.async=!0;t.src=v;
-s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
-(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '473053512020235');
-fbq('track', 'PageView');
-</script>
-
 </head>
 <body>
 
@@ -1903,8 +1891,6 @@ const Qs=[
 let qIdx=-1, answers={}, uName='', uHeight='';
 
 function startQ(){
-
-  fbq('track', 'InitiateCheckout', {content_name: 'Test ReDress 27'});
   uName=document.getElementById('uName').value.trim()||t('Tú','You');
   uHeight=document.getElementById('uHeight').value.trim();
   qIdx=0; goTo('question'); renderQ(); setPct(12);
@@ -2602,8 +2588,6 @@ window.addEventListener('DOMContentLoaded', checkUrlToken);
 // ════════════════════════════════════════
 function processResult(){
   // Ir a captura de email antes del procesamiento
-
-  fbq('track', 'Purchase', {value: 1.00, currency: 'USD'});
   goTo('email-capture'); setPct(75);
 }
 
@@ -2648,8 +2632,6 @@ function unlockResult(){
 // BUILD FULL RESULT
 // ════════════════════════════════════════
 function buildFullResult(){
-
-  fbq('track', 'Purchase', {value: 1.00, currency: 'USD'});
   const {S,variant,varLabel,sec,secLabel}=window._d;
   const d=DB[S];
   const l=lang;
