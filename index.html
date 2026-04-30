@@ -2392,6 +2392,7 @@ const DB={
       es:'La cintura manda. La proporción debe respetarse. Tu cuerpo ya tiene la arquitectura ideal — el error no es no tenerla, es no respetarla. Probablemente has pensado que, como todo te queda, puedes usar cualquier corte. Pero cuando rompes la proporción natural de tu cuerpo, pierdes todo el impacto.',
       en:'The waist rules. Proportion must be respected. Your body already has the ideal architecture — the mistake isn\'t not having it, it\'s not respecting it. You\'ve probably thought that since everything fits, you can wear any cut. But when you break your body\'s natural proportion, you lose all the impact.'
     },
+    
     objetivo:{
       es:['Respetar y acompañar la cintura — nunca ignorarla','Acompañar la curva natural sin ocultarla ni exagerarla','Control del volumen en cadera sin expandir lateralmente','Construcción limpia en la parte superior','Uso preciso del tiro para mantener proporción'],
       en:['Respect and accompany the waist — never ignore it','Follow the natural curve without hiding or exaggerating it','Hip volume control without lateral expansion','Clean construction in the upper body','Precise use of waist height to maintain proportion']
@@ -2407,6 +2408,7 @@ const DB={
       ],
       en:['Fitted dresses','Wrap cuts','Fit & flare','V necklines','High waist','Belts at waist']
     },
+
     against:{
       es:[
         {n:'Ropa recta que ignore la cintura',w:'Borra tu rasgo más valioso. Una silueta recta sobre tu cuerpo oculta la curva que ya tienes y hace que tu figura se lea plana e indefinida.'},
@@ -2418,6 +2420,7 @@ const DB={
       ],
       en:['Straight clothing','Hidden waist','Unstructured oversize','Rigid fabrics','Uniform prints','Low belts']
     },
+    
     conclusion:{
       es:'Tu silueta ya tiene la arquitectura ideal. El desafío no es crear forma — es no romperla. Cuando respetas tu proporción natural y la acompañas con intención, tu imagen se eleva automáticamente.',
       en:'Your silhouette already has the ideal architecture. The challenge isn\'t creating shape — it\'s not breaking it. When you respect your natural proportion and accompany it with intention, your image elevates automatically.'
@@ -2559,7 +2562,23 @@ function sendResultByEmail(diag){
 // ── Al cargar la página: verificar si hay token en la URL ──
 function checkUrlToken(){
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('resultado');
+  let token = params.get('resultado');
+
+  // Fallback 1: algunos retornos incluyen return_url codificada.
+  if(!token){
+    const encodedReturnUrl = params.get('return_url');
+    if(encodedReturnUrl){
+      try{
+        const nested = new URL(decodeURIComponent(encodedReturnUrl));
+        token = new URLSearchParams(nested.search).get('resultado');
+      }catch(e){}
+    }
+  }
+
+  // Fallback 2: si Square vuelve sin query esperada, usar token guardado antes del pago.
+  if(!token){
+    try{ token = sessionStorage.getItem('r27_result_token') || ''; }catch(e){}
+  }
   if(!token) return;
 
   const data = parseResultToken(token);
@@ -2622,6 +2641,9 @@ function unlockResult(){
   const diag = window._d;
   const token = buildResultToken(diag);
   const returnUrl = window.location.href.split('?')[0] + '?resultado=' + token;
+
+  // Guardar respaldo local para reconstruir el resultado al regresar.
+  try{ sessionStorage.setItem('r27_result_token', token); }catch(e){}
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
   // window.location.href = 'https://checkout.square.site/TU_LINK'
