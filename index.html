@@ -2505,23 +2505,46 @@ function parseResultToken(token){
 function sendToZoho(email, name, resultUrl){
   // ZOHO FORMS — URL exacta tomada de tu embed.
   const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
+  const payload = {
+    zf_referrer_name: window.location.hostname || '',
+    zf_redirect_url: '',
+    zc_gad: '',
+    Email: email || '',
+    SingleLine: name || '',
+    SingleLine1: resultUrl || '',
+    SingleLine2: 'test_redress27_paid'
+  };
 
-  const formData = new FormData();
-  // Campos hidden del embed
-  formData.append('zf_referrer_name', '');
-  formData.append('zf_redirect_url', '');
-  formData.append('zc_gad', '');
-  // Campos del formulario
-  formData.append('Email', email);
-  formData.append('SingleLine', name || '');
-  formData.append('SingleLine1', resultUrl || '');
-  formData.append('SingleLine2', 'test_redress27_paid');
+  // Zoho Forms suele aceptar mejor un submit HTML real que fetch/no-cors.
+  const iframeName = 'zohoSubmitFrame';
+  let iframe = document.getElementById(iframeName);
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.id = iframeName;
+    iframe.name = iframeName;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
 
-  fetch(ZOHO_FORM_URL, {
-    method: 'POST',
-    body: formData,
-    mode: 'no-cors'
-  }).catch(()=>{}); // Silenciar errores de red — no bloquear el flujo
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = ZOHO_FORM_URL;
+  form.acceptCharset = 'UTF-8';
+  form.enctype = 'multipart/form-data';
+  form.target = iframeName;
+  form.style.display = 'none';
+
+  Object.keys(payload).forEach((key)=>{
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = key;
+    input.value = payload[key];
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(()=>form.remove(), 1500);
 }
 
 function submitEmail(){
