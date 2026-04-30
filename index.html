@@ -2471,6 +2471,9 @@ const DB={
 // EMAIL CAPTURE + RESULTADO POR EMAIL
 // ════════════════════════════════════════
 let uEmail='';
+try{
+  uEmail = sessionStorage.getItem('r27_uemail') || '';
+}catch(e){}
 
 // ── Serializa el diagnóstico en un token URL-safe ──
 function buildResultToken(diag){
@@ -2549,18 +2552,25 @@ function sendToZoho(email, name, resultUrl){
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
-  if(val && val.includes('@')) uEmail=val;
+  if(val && val.includes('@')){
+    uEmail=val;
+    try{ sessionStorage.setItem('r27_uemail', uEmail); }catch(e){}
+  }
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 function skipEmail(){
+  try{ sessionStorage.removeItem('r27_uemail'); }catch(e){}
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 // ── Después del pago: construir link y mandar email ──
 function sendResultByEmail(diag){
+  if(!uEmail){
+    try{ uEmail = sessionStorage.getItem('r27_uemail') || ''; }catch(e){}
+  }
   if(!uEmail) return; // No capturó email — nada que hacer
 
   const token = buildResultToken(diag);
