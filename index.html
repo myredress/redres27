@@ -2503,22 +2503,24 @@ function parseResultToken(token){
 
 // ── Envía lead + link de resultado a Zoho ──
 function sendToZoho(email, name, resultUrl){
-  // ZOHO CAMPAIGNS — Web Signup Form API
-  // Reemplaza TU_FORM_ID y TU_ZOHO_ACCOUNT con tus datos reales de Zoho
-  // 20-04-2026 original const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
-
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/';
+  // ZOHO FORMS — URL exacta tomada de tu embed.
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
 
   const formData = new FormData();
+  // Campos hidden del embed
+  formData.append('zf_referrer_name', '');
+  formData.append('zf_redirect_url', '');
+  formData.append('zc_gad', '');
+  // Campos del formulario
   formData.append('Email', email);
-  formData.append('SingleLine', name);           // Campo "Nombre"
-  formData.append('SingleLine1', resultUrl);     // Campo "Link de resultado"
-  formData.append('SingleLine2', 'test_redress27_paid');  // Tag para automatización
+  formData.append('SingleLine', name || '');
+  formData.append('SingleLine1', resultUrl || '');
+  formData.append('SingleLine2', 'test_redress27_paid');
 
   fetch(ZOHO_FORM_URL, {
     method: 'POST',
     body: formData,
-    mode: 'no-cors' // Zoho no requiere CORS para form submissions
+    mode: 'no-cors'
   }).catch(()=>{}); // Silenciar errores de red — no bloquear el flujo
 }
 
