@@ -2474,6 +2474,7 @@ const DB={
 // EMAIL CAPTURE + RESULTADO POR EMAIL
 // ════════════════════════════════════════
 let uEmail='';
+try{ uEmail = localStorage.getItem('r27_uemail') || ''; }catch(e){}
 
 // ── Serializa el diagnóstico en un token URL-safe ──
 function buildResultToken(diag){
@@ -2498,7 +2499,10 @@ function buildResultToken(diag){
 // ── Reconstruye diagnóstico desde token ──
 function parseResultToken(token){
   try{
-    const pad=token.replace(/-/g,'+').replace(/_/g,'/');
+    const normalized = (token || '').trim().replace(/ /g, '+');
+    const base64 = normalized.replace(/-/g,'+').replace(/_/g,'/');
+    const missingPad = base64.length % 4;
+    const pad = missingPad ? base64 + '='.repeat(4 - missingPad) : base64;
     const json=decodeURIComponent(escape(atob(pad)));
     return JSON.parse(json);
   }catch(e){return null;}
@@ -2575,7 +2579,15 @@ function checkUrlToken(){
     }
   }
 
-  // Fallback 2: si Square vuelve sin query esperada, usar token guardado antes del pago.
+  // Fallback 2: algunos retornos llegan en hash (#resultado=...)
+  if(!token && window.location.hash){
+    try{
+      const hash = window.location.hash.replace(/^#/, '');
+      token = new URLSearchParams(hash).get('resultado');
+    }catch(e){}
+  }
+
+  // Fallback 3: si Square vuelve sin query esperada, usar token guardado antes del pago.
   if(!token){
     try{ token = sessionStorage.getItem('r27_result_token') || ''; }catch(e){}
   }
