@@ -2697,21 +2697,22 @@ function unlockResult(){
   // ── Construir token del resultado para incluirlo en la URL de Square ──
   const diag = window._d;
   const token = buildResultToken(diag);
-  const returnUrl = window.location.href.split('?')[0] + '?resultado=' + token;
 
   // Guardar respaldo local para reconstruir el resultado al regresar.
-  try{ sessionStorage.setItem('r27_result_token', token); }catch(e){}
+  // Nota: en square.link los parámetros personalizados (return_url/ref) pueden romper el checkout.
+  // Por eso guardamos todo localmente y enviamos una URL limpia.
+  try{
+    sessionStorage.setItem('r27_result_token', token);
+    sessionStorage.setItem('r27_uemail', uEmail || '');
+    sessionStorage.setItem('r27_uname', uName || '');
+  }catch(e){}
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
   // window.location.href = 'https://checkout.square.site/TU_LINK'
   
-  // PRODUCCIÓN square index.html
-  window.location.href = 'https://square.link/u/dJiHh0f1'
-     + '?ref=' + encodeURIComponent(uName)
-     + '&return_url=' + encodeURIComponent(returnUrl);
-
-  // DEMO: mostrar resultado directamente
-  buildFullResult();
+  // PRODUCCIÓN square index.html (URL limpia)
+  window.location.href = 'https://square.link/u/dJiHh0f1';
+  return;
 }
 
 // ════════════════════════════════════════
