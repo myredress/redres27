@@ -2475,11 +2475,13 @@ const DB={
 // ════════════════════════════════════════
 let uEmail='';
 try{ uEmail = localStorage.getItem('r27_uemail') || ''; }catch(e){}
+const DEBUG_ZOHO = false;
 
 // ── Serializa el diagnóstico en un token URL-safe ──
 function buildResultToken(diag){
   const payload={
     n: uName,
+    e: uEmail || '',
     h: uHeight,
     S: diag.S,
     v: diag.variant,
@@ -2522,16 +2524,30 @@ function sendToZoho(email, name, resultUrl){
   formData.append('SingleLine1', resultUrl);     // Campo "Link de resultado"
   formData.append('SingleLine2', 'test_redress27_paid');  // Tag para automatización
 
+  if(DEBUG_ZOHO){
+    console.log('[R27][Zoho] sendToZoho called', { email, name, resultUrl, zohoUrl: ZOHO_FORM_URL });
+  }
+
   fetch(ZOHO_FORM_URL, {
     method: 'POST',
     body: formData,
     mode: 'no-cors' // Zoho no requiere CORS para form submissions
-  }).catch(()=>{}); // Silenciar errores de red — no bloquear el flujo
+  })
+    .then(()=>{ if(DEBUG_ZOHO) console.log('[R27][Zoho] fetch resolved (no-cors)'); })
+    .catch((err)=>{
+      if(DEBUG_ZOHO) console.log('[R27][Zoho] fetch error', err);
+    }); // Silenciar errores de red — no bloquear el flujo
 }
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
-  if(val && val.includes('@')) uEmail=val;
+  if(val && val.includes('@')){
+    uEmail=val;
+    try{
+      localStorage.setItem('r27_uemail', uEmail);
+      sessionStorage.setItem('r27_uemail', uEmail);
+    }catch(e){}
+  }
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
@@ -2543,11 +2559,23 @@ function skipEmail(){
 
 // ── Después del pago: construir link y mandar email ──
 function sendResultByEmail(diag){
-  if(!uEmail) return; // No capturó email — nada que hacer
+  if(!uEmail){
+    if(DEBUG_ZOHO) console.log('[R27][Zoho] skip sendResultByEmail: missing uEmail');
+    return; // No capturó email — nada que hacer
+  }
 
   const token = buildResultToken(diag);
   const baseUrl = window.location.href.split('?')[0]; // URL limpia sin params
   const resultUrl = baseUrl + '?resultado=' + token;
+
+  if(DEBUG_ZOHO){
+    console.log('[R27][Zoho] sendResultByEmail payload', {
+      uEmail,
+      uName,
+      tokenLength: token ? token.length : 0,
+      resultUrl
+    });
+  }
 
   // Mandar a Zoho
   sendToZoho(uEmail, uName, resultUrl);
@@ -2594,10 +2622,27 @@ function checkUrlToken(){
   if(!token) return;
 
   const data = parseResultToken(token);
-  if(!data) return;
+  if(!data){
+    if(DEBUG_ZOHO) console.log('[R27][Zoho] checkUrlToken: token parse failed');
+    return;
+  }
 
   // Restaurar datos del token
   uName = data.n || '';
+  uEmail = data.e || '';
+  if(!uEmail){
+    try{
+      uEmail = sessionStorage.getItem('r27_uemail') || localStorage.getItem('r27_uemail') || '';
+    }catch(e){}
+  }
+  if(DEBUG_ZOHO){
+    console.log('[R27][Zoho] checkUrlToken restored', {
+      hasToken: !!token,
+      restoredName: uName,
+      restoredEmail: uEmail,
+      hasAnswers: !!(data.a && Object.keys(data.a).length)
+    });
+  }
   uHeight = data.h || '';
   answers = data.a || {};
 
