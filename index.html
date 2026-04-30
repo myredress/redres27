@@ -764,6 +764,7 @@ footer {
 }
 </style>
 
+
 <script>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function()
 {n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -774,6 +775,7 @@ s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
 fbq('init', '473053512020235');
 fbq('track', 'PageView');
 </script>
+
 
 
 
@@ -1906,7 +1908,7 @@ let qIdx=-1, answers={}, uName='', uHeight='';
 
 function startQ(){
 
-  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
+ fbq('track', 'InitiateCheckout', {content_name: 'Test ReDress 27'});
 
   uName=document.getElementById('uName').value.trim()||t('Tú','You');
   uHeight=document.getElementById('uHeight').value.trim();
@@ -2392,7 +2394,6 @@ const DB={
       es:'La cintura manda. La proporción debe respetarse. Tu cuerpo ya tiene la arquitectura ideal — el error no es no tenerla, es no respetarla. Probablemente has pensado que, como todo te queda, puedes usar cualquier corte. Pero cuando rompes la proporción natural de tu cuerpo, pierdes todo el impacto.',
       en:'The waist rules. Proportion must be respected. Your body already has the ideal architecture — the mistake isn\'t not having it, it\'s not respecting it. You\'ve probably thought that since everything fits, you can wear any cut. But when you break your body\'s natural proportion, you lose all the impact.'
     },
-    
     objetivo:{
       es:['Respetar y acompañar la cintura — nunca ignorarla','Acompañar la curva natural sin ocultarla ni exagerarla','Control del volumen en cadera sin expandir lateralmente','Construcción limpia en la parte superior','Uso preciso del tiro para mantener proporción'],
       en:['Respect and accompany the waist — never ignore it','Follow the natural curve without hiding or exaggerating it','Hip volume control without lateral expansion','Clean construction in the upper body','Precise use of waist height to maintain proportion']
@@ -2408,7 +2409,6 @@ const DB={
       ],
       en:['Fitted dresses','Wrap cuts','Fit & flare','V necklines','High waist','Belts at waist']
     },
-
     against:{
       es:[
         {n:'Ropa recta que ignore la cintura',w:'Borra tu rasgo más valioso. Una silueta recta sobre tu cuerpo oculta la curva que ya tienes y hace que tu figura se lea plana e indefinida.'},
@@ -2420,7 +2420,6 @@ const DB={
       ],
       en:['Straight clothing','Hidden waist','Unstructured oversize','Rigid fabrics','Uniform prints','Low belts']
     },
-    
     conclusion:{
       es:'Tu silueta ya tiene la arquitectura ideal. El desafío no es crear forma — es no romperla. Cuando respetas tu proporción natural y la acompañas con intención, tu imagen se eleva automáticamente.',
       en:'Your silhouette already has the ideal architecture. The challenge isn\'t creating shape — it\'s not breaking it. When you respect your natural proportion and accompany it with intention, your image elevates automatically.'
@@ -2474,14 +2473,11 @@ const DB={
 // EMAIL CAPTURE + RESULTADO POR EMAIL
 // ════════════════════════════════════════
 let uEmail='';
-try{ uEmail = localStorage.getItem('r27_uemail') || ''; }catch(e){}
-const DEBUG_ZOHO = false;
 
 // ── Serializa el diagnóstico en un token URL-safe ──
 function buildResultToken(diag){
   const payload={
     n: uName,
-    e: uEmail || '',
     h: uHeight,
     S: diag.S,
     v: diag.variant,
@@ -2501,10 +2497,7 @@ function buildResultToken(diag){
 // ── Reconstruye diagnóstico desde token ──
 function parseResultToken(token){
   try{
-    const normalized = (token || '').trim().replace(/ /g, '+');
-    const base64 = normalized.replace(/-/g,'+').replace(/_/g,'/');
-    const missingPad = base64.length % 4;
-    const pad = missingPad ? base64 + '='.repeat(4 - missingPad) : base64;
+    const pad=token.replace(/-/g,'+').replace(/_/g,'/');
     const json=decodeURIComponent(escape(atob(pad)));
     return JSON.parse(json);
   }catch(e){return null;}
@@ -2514,9 +2507,10 @@ function parseResultToken(token){
 function sendToZoho(email, name, resultUrl){
   // ZOHO CAMPAIGNS — Web Signup Form API
   // Reemplaza TU_FORM_ID y TU_ZOHO_ACCOUNT con tus datos reales de Zoho
-  // 20-04-2026 original const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
+  //const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
 
   const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
+
 
   const formData = new FormData();
   formData.append('Email', email);
@@ -2524,30 +2518,16 @@ function sendToZoho(email, name, resultUrl){
   formData.append('SingleLine1', resultUrl);     // Campo "Link de resultado"
   formData.append('SingleLine2', 'test_redress27_paid');  // Tag para automatización
 
-  if(DEBUG_ZOHO){
-    console.log('[R27][Zoho] sendToZoho called', { email, name, resultUrl, zohoUrl: ZOHO_FORM_URL });
-  }
-
   fetch(ZOHO_FORM_URL, {
     method: 'POST',
     body: formData,
     mode: 'no-cors' // Zoho no requiere CORS para form submissions
-  })
-    .then(()=>{ if(DEBUG_ZOHO) console.log('[R27][Zoho] fetch resolved (no-cors)'); })
-    .catch((err)=>{
-      if(DEBUG_ZOHO) console.log('[R27][Zoho] fetch error', err);
-    }); // Silenciar errores de red — no bloquear el flujo
+  }).catch(()=>{}); // Silenciar errores de red — no bloquear el flujo
 }
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
-  if(val && val.includes('@')){
-    uEmail=val;
-    try{
-      localStorage.setItem('r27_uemail', uEmail);
-      sessionStorage.setItem('r27_uemail', uEmail);
-    }catch(e){}
-  }
+  if(val && val.includes('@')) uEmail=val;
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
@@ -2559,23 +2539,11 @@ function skipEmail(){
 
 // ── Después del pago: construir link y mandar email ──
 function sendResultByEmail(diag){
-  if(!uEmail){
-    if(DEBUG_ZOHO) console.log('[R27][Zoho] skip sendResultByEmail: missing uEmail');
-    return; // No capturó email — nada que hacer
-  }
+  if(!uEmail) return; // No capturó email — nada que hacer
 
   const token = buildResultToken(diag);
   const baseUrl = window.location.href.split('?')[0]; // URL limpia sin params
   const resultUrl = baseUrl + '?resultado=' + token;
-
-  if(DEBUG_ZOHO){
-    console.log('[R27][Zoho] sendResultByEmail payload', {
-      uEmail,
-      uName,
-      tokenLength: token ? token.length : 0,
-      resultUrl
-    });
-  }
 
   // Mandar a Zoho
   sendToZoho(uEmail, uName, resultUrl);
@@ -2594,55 +2562,14 @@ function sendResultByEmail(diag){
 // ── Al cargar la página: verificar si hay token en la URL ──
 function checkUrlToken(){
   const params = new URLSearchParams(window.location.search);
-  let token = params.get('resultado');
-
-  // Fallback 1: algunos retornos incluyen return_url codificada.
-  if(!token){
-    const encodedReturnUrl = params.get('return_url');
-    if(encodedReturnUrl){
-      try{
-        const nested = new URL(decodeURIComponent(encodedReturnUrl));
-        token = new URLSearchParams(nested.search).get('resultado');
-      }catch(e){}
-    }
-  }
-
-  // Fallback 2: algunos retornos llegan en hash (#resultado=...)
-  if(!token && window.location.hash){
-    try{
-      const hash = window.location.hash.replace(/^#/, '');
-      token = new URLSearchParams(hash).get('resultado');
-    }catch(e){}
-  }
-
-  // Fallback 3: si Square vuelve sin query esperada, usar token guardado antes del pago.
-  if(!token){
-    try{ token = sessionStorage.getItem('r27_result_token') || ''; }catch(e){}
-  }
+  const token = params.get('resultado');
   if(!token) return;
 
   const data = parseResultToken(token);
-  if(!data){
-    if(DEBUG_ZOHO) console.log('[R27][Zoho] checkUrlToken: token parse failed');
-    return;
-  }
+  if(!data) return;
 
   // Restaurar datos del token
   uName = data.n || '';
-  uEmail = data.e || '';
-  if(!uEmail){
-    try{
-      uEmail = sessionStorage.getItem('r27_uemail') || localStorage.getItem('r27_uemail') || '';
-    }catch(e){}
-  }
-  if(DEBUG_ZOHO){
-    console.log('[R27][Zoho] checkUrlToken restored', {
-      hasToken: !!token,
-      restoredName: uName,
-      restoredEmail: uEmail,
-      hasAnswers: !!(data.a && Object.keys(data.a).length)
-    });
-  }
   uHeight = data.h || '';
   answers = data.a || {};
 
@@ -2670,7 +2597,8 @@ window.addEventListener('DOMContentLoaded', checkUrlToken);
 function processResult(){
   // Ir a captura de email antes del procesamiento
 
-  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
+fbq('track', 'AddToCart', {value: 7.00, currency: 'USD'});
+
   goTo('email-capture'); setPct(75);
 }
 
@@ -2697,22 +2625,15 @@ function unlockResult(){
   // ── Construir token del resultado para incluirlo en la URL de Square ──
   const diag = window._d;
   const token = buildResultToken(diag);
-
-  // Guardar respaldo local para reconstruir el resultado al regresar.
-  // Nota: en square.link los parámetros personalizados (return_url/ref) pueden romper el checkout.
-  // Por eso guardamos todo localmente y enviamos una URL limpia.
-  try{
-    sessionStorage.setItem('r27_result_token', token);
-    sessionStorage.setItem('r27_uemail', uEmail || '');
-    sessionStorage.setItem('r27_uname', uName || '');
-  }catch(e){}
+  const returnUrl = window.location.href.split('?')[0] + '?resultado=' + token;
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
-  // window.location.href = 'https://checkout.square.site/TU_LINK'
-  
-  // PRODUCCIÓN square index.html (URL limpia)
-  window.location.href = 'https://square.link/u/dJiHh0f1';
-  return;
+   window.location.href = 'https://square.link/u/dJiHh0f1'
+    + '?ref=' + encodeURIComponent(uName)
+    + '&return_url=' + encodeURIComponent(returnUrl);
+
+  // DEMO: mostrar resultado directamente
+  buildFullResult();
 }
 
 // ════════════════════════════════════════
@@ -2720,8 +2641,7 @@ function unlockResult(){
 // ════════════════════════════════════════
 function buildFullResult(){
 
-  fbq('track', 'Purchase', {value: 1.00, currency: 'USD'});
-
+fbq('track', 'Purchase', {value: 7.00, currency: 'USD'});
 
   const {S,variant,varLabel,sec,secLabel}=window._d;
   const d=DB[S];
