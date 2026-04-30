@@ -2471,9 +2471,6 @@ const DB={
 // EMAIL CAPTURE + RESULTADO POR EMAIL
 // ════════════════════════════════════════
 let uEmail='';
-try{
-  uEmail = sessionStorage.getItem('r27_uemail') || '';
-}catch(e){}
 
 // ── Serializa el diagnóstico en un token URL-safe ──
 function buildResultToken(diag){
@@ -2506,71 +2503,39 @@ function parseResultToken(token){
 
 // ── Envía lead + link de resultado a Zoho ──
 function sendToZoho(email, name, resultUrl){
-  // ZOHO FORMS — URL exacta tomada de tu embed.
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
-  const payload = {
-    zf_referrer_name: window.location.hostname || '',
-    zf_redirect_url: '',
-    zc_gad: '',
-    Email: email || '',
-    SingleLine: name || '',
-    SingleLine1: resultUrl || '',
-    SingleLine2: 'test_redress27_paid'
-  };
+  // ZOHO CAMPAIGNS — Web Signup Form API
+  // Reemplaza TU_FORM_ID y TU_ZOHO_ACCOUNT con tus datos reales de Zoho
+  // 20-04-2026 original const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
 
-  // Zoho Forms suele aceptar mejor un submit HTML real que fetch/no-cors.
-  const iframeName = 'zohoSubmitFrame';
-  let iframe = document.getElementById(iframeName);
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = iframeName;
-    iframe.name = iframeName;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-  }
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/';
 
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = ZOHO_FORM_URL;
-  form.acceptCharset = 'UTF-8';
-  form.enctype = 'multipart/form-data';
-  form.target = iframeName;
-  form.style.display = 'none';
+  const formData = new FormData();
+  formData.append('Email', email);
+  formData.append('SingleLine', name);           // Campo "Nombre"
+  formData.append('SingleLine1', resultUrl);     // Campo "Link de resultado"
+  formData.append('SingleLine2', 'test_redress27_paid');  // Tag para automatización
 
-  Object.keys(payload).forEach((key)=>{
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = key;
-    input.value = payload[key];
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  setTimeout(()=>form.remove(), 1500);
+  fetch(ZOHO_FORM_URL, {
+    method: 'POST',
+    body: formData,
+    mode: 'no-cors' // Zoho no requiere CORS para form submissions
+  }).catch(()=>{}); // Silenciar errores de red — no bloquear el flujo
 }
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
-  if(val && val.includes('@')){
-    uEmail=val;
-    try{ sessionStorage.setItem('r27_uemail', uEmail); }catch(e){}
-  }
+  if(val && val.includes('@')) uEmail=val;
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 function skipEmail(){
-  try{ sessionStorage.removeItem('r27_uemail'); }catch(e){}
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 // ── Después del pago: construir link y mandar email ──
 function sendResultByEmail(diag){
-  if(!uEmail){
-    try{ uEmail = sessionStorage.getItem('r27_uemail') || ''; }catch(e){}
-  }
   if(!uEmail) return; // No capturó email — nada que hacer
 
   const token = buildResultToken(diag);
