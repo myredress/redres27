@@ -771,11 +771,9 @@ if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
 t=b.createElement(e);t.async=!0;t.src=v;
 s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
 (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '473053512020235');
+fbq('init', '48210509');
 fbq('track', 'PageView');
 </script>
-
-
 
 </head>
 <body>
@@ -1905,8 +1903,7 @@ const Qs=[
 let qIdx=-1, answers={}, uName='', uHeight='';
 
 function startQ(){
-
-  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
+  fbq('track', 'InitiateCheckout', {content_name: 'Test ReDress 27'});
 
   uName=document.getElementById('uName').value.trim()||t('Tú','You');
   uHeight=document.getElementById('uHeight').value.trim();
@@ -2471,9 +2468,6 @@ const DB={
 // EMAIL CAPTURE + RESULTADO POR EMAIL
 // ════════════════════════════════════════
 let uEmail='';
-try{
-  uEmail = sessionStorage.getItem('r27_uemail') || '';
-}catch(e){}
 
 // ── Serializa el diagnóstico en un token URL-safe ──
 function buildResultToken(diag){
@@ -2506,71 +2500,40 @@ function parseResultToken(token){
 
 // ── Envía lead + link de resultado a Zoho ──
 function sendToZoho(email, name, resultUrl){
-  // ZOHO FORMS — URL exacta tomada de tu embed.
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
-  const payload = {
-    zf_referrer_name: window.location.hostname || '',
-    zf_redirect_url: '',
-    zc_gad: '',
-    Email: email || '',
-    SingleLine: name || '',
-    SingleLine1: resultUrl || '',
-    SingleLine2: 'test_redress27_paid'
-  };
+  // ZOHO CAMPAIGNS — Web Signup Form API
+  // Reemplaza TU_FORM_ID y TU_ZOHO_ACCOUNT con tus datos reales de Zoho
+  //const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
 
-  // Zoho Forms suele aceptar mejor un submit HTML real que fetch/no-cors.
-  const iframeName = 'zohoSubmitFrame';
-  let iframe = document.getElementById(iframeName);
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = iframeName;
-    iframe.name = iframeName;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-  }
+ const ZOHO_FORM_URL =  'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
 
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = ZOHO_FORM_URL;
-  form.acceptCharset = 'UTF-8';
-  form.enctype = 'multipart/form-data';
-  form.target = iframeName;
-  form.style.display = 'none';
 
-  Object.keys(payload).forEach((key)=>{
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = key;
-    input.value = payload[key];
-    form.appendChild(input);
-  });
+  const formData = new FormData();
+  formData.append('Email', email);
+  formData.append('SingleLine', name);           // Campo "Nombre"
+  formData.append('SingleLine1', resultUrl);     // Campo "Link de resultado"
+  formData.append('SingleLine2', 'test_redress27_paid');  // Tag para automatización
 
-  document.body.appendChild(form);
-  form.submit();
-  setTimeout(()=>form.remove(), 1500);
+  fetch(ZOHO_FORM_URL, {
+    method: 'POST',
+    body: formData,
+    mode: 'no-cors' // Zoho no requiere CORS para form submissions
+  }).catch(()=>{}); // Silenciar errores de red — no bloquear el flujo
 }
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
-  if(val && val.includes('@')){
-    uEmail=val;
-    try{ sessionStorage.setItem('r27_uemail', uEmail); }catch(e){}
-  }
+  if(val && val.includes('@')) uEmail=val;
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 function skipEmail(){
-  try{ sessionStorage.removeItem('r27_uemail'); }catch(e){}
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 // ── Después del pago: construir link y mandar email ──
 function sendResultByEmail(diag){
-  if(!uEmail){
-    try{ uEmail = sessionStorage.getItem('r27_uemail') || ''; }catch(e){}
-  }
   if(!uEmail) return; // No capturó email — nada que hacer
 
   const token = buildResultToken(diag);
@@ -2630,6 +2593,7 @@ function processResult(){
   // Ir a captura de email antes del procesamiento
 
   fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
+
   goTo('email-capture'); setPct(75);
 }
 
@@ -2660,11 +2624,12 @@ function unlockResult(){
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
   // window.location.href = 'https://checkout.square.site/TU_LINK'
-  
-  // PRODUCCIÓN square index.html
-  window.location.href = 'https://square.link/u/dJiHh0f1'
-     + '?ref=' + encodeURIComponent(uName)
-     + '&return_url=' + encodeURIComponent(returnUrl);
+  //   + '?ref=' + encodeURIComponent(uName)
+  //   + '&return_url=' + encodeURIComponent(returnUrl);
+
+ window.location.href = 'https://square.link/u/dJiHh0f1'
+   + '?ref=' + encodeURIComponent(uName)
+   + '&return_url=' + encodeURIComponent(returnUrl);
 
   // DEMO: mostrar resultado directamente
   buildFullResult();
@@ -2676,7 +2641,6 @@ function unlockResult(){
 function buildFullResult(){
 
   fbq('track', 'Purchase', {value: 1.00, currency: 'USD'});
-
 
   const {S,variant,varLabel,sec,secLabel}=window._d;
   const d=DB[S];
