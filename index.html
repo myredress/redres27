@@ -10,6 +10,7 @@
    REDRESS 27 — QOVES-INSPIRED DESIGN
    Light, clinical, premium, editorial
 ═══════════════════════════════════════ */
+
 :root {
   --cream:   #faf8f4;
   --white:   #ffffff;
@@ -26,6 +27,7 @@
   --goldb:   rgba(184,146,58,0.15);
   --black:   #000000;
 }
+
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -764,6 +766,7 @@ footer {
 }
 </style>
 
+
 <script>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function()
 {n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -771,9 +774,12 @@ if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
 t=b.createElement(e);t.async=!0;t.src=v;
 s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
 (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '48210509');
+fbq('init', '473053512020235');
 fbq('track', 'PageView');
 </script>
+
+
+
 
 </head>
 <body>
@@ -1903,7 +1909,8 @@ const Qs=[
 let qIdx=-1, answers={}, uName='', uHeight='';
 
 function startQ(){
-  fbq('track', 'InitiateCheckout', {content_name: 'Test ReDress 27'});
+
+ fbq('track', 'InitiateCheckout', {content_name: 'Test ReDress 27'});
 
   uName=document.getElementById('uName').value.trim()||t('Tú','You');
   uHeight=document.getElementById('uHeight').value.trim();
@@ -2504,7 +2511,7 @@ function sendToZoho(email, name, resultUrl){
   // Reemplaza TU_FORM_ID y TU_ZOHO_ACCOUNT con tus datos reales de Zoho
   //const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
 
- const ZOHO_FORM_URL =  'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
 
 
   const formData = new FormData();
@@ -2592,7 +2599,7 @@ window.addEventListener('DOMContentLoaded', checkUrlToken);
 function processResult(){
   // Ir a captura de email antes del procesamiento
 
-  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
+fbq('track', 'AddToCart', {value: 7.00, currency: 'USD'});
 
   goTo('email-capture'); setPct(75);
 }
@@ -2623,13 +2630,9 @@ function unlockResult(){
   const returnUrl = window.location.href.split('?')[0] + '?resultado=' + token;
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
-  // window.location.href = 'https://checkout.square.site/TU_LINK'
-  //   + '?ref=' + encodeURIComponent(uName)
-  //   + '&return_url=' + encodeURIComponent(returnUrl);
-
- window.location.href = 'https://square.link/u/dJiHh0f1'
-   + '?ref=' + encodeURIComponent(uName)
-   + '&return_url=' + encodeURIComponent(returnUrl);
+   window.location.href = 'https://square.link/u/dJiHh0f1'
+    + '?ref=' + encodeURIComponent(uName)
+    + '&return_url=' + encodeURIComponent(returnUrl);
 
   // DEMO: mostrar resultado directamente
   buildFullResult();
@@ -2640,7 +2643,7 @@ function unlockResult(){
 // ════════════════════════════════════════
 function buildFullResult(){
 
-  fbq('track', 'Purchase', {value: 1.00, currency: 'USD'});
+fbq('track', 'Purchase', {value: 7.00, currency: 'USD'});
 
   const {S,variant,varLabel,sec,secLabel}=window._d;
   const d=DB[S];
