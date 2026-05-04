@@ -2481,6 +2481,7 @@ function buildResultToken(diag){
   const payload={
     n: uName,
     h: uHeight,
+    e: uEmail,  // Incluir email en el token
     S: diag.S,
     v: diag.variant,
     vL: diag.varLabel,
@@ -2507,24 +2508,50 @@ function parseResultToken(token){
 
 // ── Envía lead + link de resultado a Zoho ──
 function sendToZoho(email, name, resultUrl){
-  // ZOHO CAMPAIGNS — Web Signup Form API
-  // Reemplaza TU_FORM_ID y TU_ZOHO_ACCOUNT con tus datos reales de Zoho
-  //const ZOHO_FORM_URL = 'https://forms.zohopublic.com/TU_ACCOUNT/form/TU_FORM/formperma/TU_KEY/htmlRecords/submit';
+  // ZOHO FORMS — URL exacta tomada de tu embed.
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
+  const payload = {
+    zf_referrer_name: window.location.hostname || '',
+    zf_redirect_url: '',
+    zc_gad: '',
+    Email: email || '',
+    SingleLine: name || '',
+    SingleLine1: resultUrl || '',
+    SingleLine2: 'test_redress27_paid'
+  };
 
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
+  // Zoho Forms suele aceptar mejor un submit HTML real que fetch/no-cors.
+  const iframeName = 'zohoSubmitFrame';
+  let iframe = document.getElementById(iframeName);
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.id = iframeName;
+    iframe.name = iframeName;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
 
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = ZOHO_FORM_URL;
+  form.acceptCharset = 'UTF-8';
+  form.enctype = 'multipart/form-data';
+  form.target = iframeName;
+  form.style.display = 'none';
 
-  const formData = new FormData();
-  formData.append('Email', email);
-  formData.append('SingleLine', name);           // Campo "Nombre"
-  formData.append('SingleLine1', resultUrl);     // Campo "Link de resultado"
-  formData.append('SingleLine2', 'test_redress27_paid');  // Tag para automatización
+  Object.keys(payload).forEach((key)=>{
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = key;
+    input.value = payload[key];
+    form.appendChild(input);
+  });
 
-  fetch(ZOHO_FORM_URL, {
-    method: 'POST',
-    body: formData,
-    mode: 'no-cors' // Zoho no requiere CORS para form submissions
-  }).catch(()=>{}); // Silenciar errores de red — no bloquear el flujo
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(()=>form.remove(), 1500);
+  
+  console.log('📤 Form submitted to Zoho:', payload);
 }
 
 function submitEmail(){
@@ -2573,6 +2600,7 @@ function checkUrlToken(){
   // Restaurar datos del token
   uName = data.n || '';
   uHeight = data.h || '';
+  uEmail = data.e || '';  // Restaurar email del token
   answers = data.a || {};
 
   // Mostrar directamente el resultado sin pago (ya pagó)
@@ -2588,6 +2616,14 @@ function checkUrlToken(){
   goTo('full-result');
   setPct(100);
   buildFullResult();
+
+  // ── Enviar email después del pago ──
+  if(uEmail && window._d){
+    console.log('📧 Enviando email post-pago a:', uEmail);
+    sendResultByEmail(window._d);
+  } else {
+    console.log('⚠️ No se puede enviar email - falta email o diagnóstico');
+  }
 }
 
 // Ejecutar al cargar
@@ -2628,6 +2664,14 @@ function unlockResult(){
   const diag = window._d;
   const token = buildResultToken(diag);
   const returnUrl = window.location.href.split('?')[0] + '?resultado=' + token;
+
+  // ── Enviar datos a Zoho ANTES del pago ──
+  if(uEmail){
+    sendToZoho(uEmail, uName, returnUrl);
+    console.log('📤 Enviando datos a Zoho Forms:', {email: uEmail, name: uName, url: returnUrl});
+  } else {
+    console.log('⚠️ No se capturó email - no se envía a Zoho Forms');
+  }
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
    window.location.href = 'https://square.link/u/dJiHh0f1'
@@ -2963,6 +3007,145 @@ function toggleFaq(el){
   item.querySelectorAll('[data-es]').forEach(e=>{
     e.innerHTML=e.getAttribute('data-'+lang)||e.getAttribute('data-es');
   });
+}
+
+// ── DEBUG ZOHO FORM SUBMISSION ──
+function debugZohoForm(){
+  console.log('🔍 DEBUG: Zoho Form Submission Analysis');
+  
+  // Test data
+  const testEmail = 'test@example.com';
+  const testName = 'Test User';
+  const testResultUrl = window.location.href + '?test=123';
+  
+  // 1. Check URL
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
+  console.log('🌐 Zoho Form URL:', ZOHO_FORM_URL);
+  
+  // 2. Test URL accessibility
+  fetch(ZOHO_FORM_URL.replace('/htmlRecords/submit', ''), {method: 'HEAD'})
+    .then(response => console.log('✅ Form URL accessible:', response.status))
+    .catch(error => console.log('❌ Form URL error:', error));
+  
+  // 3. Test different payload structures
+  const payloads = [
+    {
+      name: 'Current payload',
+      data: {
+        Email: testEmail,
+        SingleLine: testName,
+        SingleLine1: testResultUrl,
+        SingleLine2: 'test_redress27_paid'
+      }
+    },
+    {
+      name: 'Alternative payload 1',
+      data: {
+        Email: testEmail,
+        Name: testName,
+        Result_URL: testResultUrl,
+        Source: 'test_redress27_paid'
+      }
+    },
+    {
+      name: 'Alternative payload 2',
+      data: {
+        'Email': testEmail,
+        'Nombre': testName,
+        'Link de resultado': testResultUrl,
+        'Tag': 'test_redress27_paid'
+      }
+    }
+  ];
+  
+  payloads.forEach((payload, index) => {
+    console.log(`📋 Payload ${index + 1} (${payload.name}):`, payload.data);
+    testZohoSubmissionMethod(payload.data, index + 1);
+  });
+}
+
+function testZohoSubmissionMethod(payload, methodNum){
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
+  
+  // Method 1: FormData with fetch
+  const formData = new FormData();
+  Object.keys(payload).forEach(key => {
+    formData.append(key, payload[key]);
+  });
+  
+  fetch(ZOHO_FORM_URL, {
+    method: 'POST',
+    body: formData,
+    mode: 'no-cors'
+  }).then(() => {
+    console.log(`✅ Method ${methodNum}-1 (fetch): Sent successfully`);
+  }).catch(error => {
+    console.log(`❌ Method ${methodNum}-1 (fetch): Error:`, error);
+  });
+  
+  // Method 2: Hidden form submission
+  setTimeout(() => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = ZOHO_FORM_URL;
+    form.style.display = 'none';
+    
+    Object.keys(payload).forEach(key => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = payload[key];
+      form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => form.remove(), 1000);
+    console.log(`✅ Method ${methodNum}-2 (hidden form): Submitted`);
+  }, 500);
+}
+
+// ── SIMPLE TEST ZOHO FORM SUBMISSION ──
+function testZohoSubmission(){
+  console.log('🧪 Testing Zoho Form submission...');
+  
+  // Test data
+  const testEmail = 'test@example.com';
+  const testName = 'Test User';
+  const testResultUrl = window.location.href + '?test=123';
+  
+  // Call the sendToZoho function
+  sendToZoho(testEmail, testName, testResultUrl);
+  
+  console.log('✅ Zoho Form submission test initiated');
+  console.log('📧 Email:', testEmail);
+  console.log('👤 Name:', testName);
+  console.log('🔗 Result URL:', testResultUrl);
+  console.log('🔍 Check browser Network tab and Zoho Forms dashboard');
+  
+  return 'Test completed - check console and network tab';
+}
+
+// ── PRUEBA SIMPLE DE ENVÍO A ZOHO ──
+function pruebaZohoForm(){
+  console.log('🧪 PRUEBA: Enviando datos a Zoho Form');
+  
+  // Datos de prueba
+  const email = 'prueba@test.com';
+  const nombre = 'Usuario Prueba';
+  const url = window.location.href + '?resultado=prueba123';
+  
+  console.log('📧 Email:', email);
+  console.log('👤 Nombre:', nombre);
+  console.log('🔗 URL:', url);
+  
+  // Enviar a Zoho
+  sendToZoho(email, nombre, url);
+  
+  console.log('✅ Datos enviados - revisa tu Zoho Forms dashboard');
+  console.log('🌐 Abre la pestaña Network para ver la petición POST');
+  
+  return 'Prueba completada - revisa consola y Zoho Forms';
 }
 
 // ── START TEST from landing ──
