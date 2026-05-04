@@ -2593,6 +2593,19 @@ function checkUrlToken(){
   const params = new URLSearchParams(window.location.search);
   const token = params.get('resultado');
   if(!token) return;
+  
+  // Si el token está vacío pero tenemos diagnóstico guardado, mostrar resultados
+  if(token === '' && window._d){
+    console.log('🔧 Token vacío detectado - usando diagnóstico guardado');
+    buildFullResult();
+    goTo('full-result');
+    setPct(100);
+    
+    // Limpiar URL
+    const cleanUrl = window.location.href.split('?')[0];
+    window.history.replaceState({}, '', cleanUrl);
+    return;
+  }
 
   const data = parseResultToken(token);
   if(!data) return;
@@ -2690,8 +2703,15 @@ function buildFullResult(){
 fbq('track', 'Purchase', {value: 7.00, currency: 'USD'});
 
   const {S,variant,varLabel,sec,secLabel}=window._d;
-  const d=DB[S];
+  const d=DB && DB[S] ? DB[S] : null;
   const l=lang;
+  
+  // Validación de datos del diagnóstico
+  if(!d || !S){
+    console.error('❌ Error: Datos del diagnóstico inválidos', {S, d, window_d: window._d});
+    alert('Error al cargar los resultados. Por favor, intenta nuevamente.');
+    return;
+  }
 
   // Mandar resultado por email si hay dirección capturada
   sendResultByEmail(window._d);
@@ -3146,6 +3166,186 @@ function pruebaZohoForm(){
   console.log('🌐 Abre la pestaña Network para ver la petición POST');
   
   return 'Prueba completada - revisa consola y Zoho Forms';
+}
+
+// ── DEBUG SQUARE PAYMENT RETURN ──
+function debugSquareReturn(){
+  console.log('🔍 DEBUG: Analizando retorno de Square');
+  
+  // 1. Verificar URL actual
+  const currentUrl = window.location.href;
+  console.log('📍 URL actual:', currentUrl);
+  
+  // 2. Verificar parámetros
+  const params = new URLSearchParams(window.location.search);
+  console.log('📋 Parámetros en URL:');
+  for (let [key, value] of params.entries()) {
+    console.log(`  ${key}: ${value}`);
+  }
+  
+  // 3. Verificar token
+  const token = params.get('resultado');
+  console.log('🎫 Token encontrado:', token ? 'SÍ' : 'NO');
+  if(token){
+    console.log('🎫 Token completo:', token);
+    
+    // 4. Intentar parsear token
+    const data = parseResultToken(token);
+    console.log('📦 Token parseado:', data ? 'EXITOSO' : 'FALLÓ');
+    if(data){
+      console.log('📦 Datos del token:', data);
+      console.log('👤 Nombre:', data.n);
+      console.log('📧 Email:', data.e);
+      console.log('🏋️ Altura:', data.h);
+      console.log('🧪 Diagnóstico S:', data.S);
+    }
+  }
+  
+  // 5. Verificar variables globales
+  console.log('🌐 Variables globales:');
+  console.log('  uName:', uName);
+  console.log('  uEmail:', uEmail);
+  console.log('  uHeight:', uHeight);
+  console.log('  answers:', Object.keys(answers).length, 'respuestas');
+  console.log('  window._d:', window._d ? 'EXISTE' : 'NO EXISTE');
+  
+  // 6. Verificar elementos de la página
+  console.log('📄 Elementos de página:');
+  console.log('  #full-result:', document.getElementById('full-result') ? 'EXISTE' : 'NO EXISTE');
+  console.log('  #email-capture:', document.getElementById('email-capture') ? 'EXISTE' : 'NO EXISTE');
+  
+  // 7. Forzar ejecución de checkUrlToken
+  console.log('🔄 Forzando ejecución de checkUrlToken...');
+  checkUrlToken();
+  
+  return 'Debug completado - revisa consola';
+}
+
+// ── PRUEBA COMPLETA DEL FLUJO ──
+function pruebaCompletaFlujo(){
+  console.log('🚀 INICIANDO PRUEBA COMPLETA DEL FLUJO');
+  
+  // 1. Configurar datos de prueba realistas
+  uName = 'Cliente Prueba Completo';
+  uEmail = 'cliente.prueba@example.com';
+  uHeight = '165';
+  lang = 'es';
+  
+  // Respuestas que generen un diagnóstico específico
+  answers = {
+    'q1': 'A', 'q2': 'B', 'q3': 'A', 'q4': 'C', 'q5': 'B',
+    'q6': 'A', 'q7': 'C', 'q8': 'B', 'q9': 'A', 'q10': 'C'
+  };
+  
+  console.log('📋 Paso 1: Datos configurados');
+  console.log('  👤 Nombre:', uName);
+  console.log('  📧 Email:', uEmail);
+  console.log('  🏋️ Altura:', uHeight);
+  console.log('  📝 Respuestas:', Object.keys(answers).length, 'preguntas');
+  
+  // 2. Ejecutar diagnóstico
+  console.log('🧪 Paso 2: Ejecutando diagnóstico...');
+  const {S,variant,varLabel,sec,secLabel}=diagnose();
+  window._d={S,variant,varLabel,sec,secLabel};
+  
+  console.log('🔍 Resultado del diagnóstico:');
+  console.log('  Tipo principal:', S, '-', varLabel);
+  console.log('  Secundario:', sec, '-', secLabel);
+  
+  // 3. Enviar email de prueba (diagnóstico inicial)
+  console.log('📧 Paso 3: Enviando email de diagnóstico...');
+  const emailEnviado = sendResultByEmail(window._d);
+  console.log('  Email enviado:', emailEnviado ? '✅ ÉXITO' : '❌ FALLÓ');
+  
+  // 4. Generar token para Square
+  console.log('🎫 Paso 4: Generando token para Square...');
+  const token = buildResultToken(window._d);
+  console.log('  Token generado:', token.substring(0, 50) + '...');
+  
+  // 5. Enviar a Zoho (simulación de pre-pago)
+  console.log('📊 Paso 5: Enviando datos a Zoho Forms...');
+  const baseUrl = window.location.href.split('?')[0];
+  const returnUrl = baseUrl + '?resultado=' + token;
+  
+  console.log('  📧 Email para Zoho:', uEmail);
+  console.log('  👤 Nombre para Zoho:', uName);
+  console.log('  🔗 URL de retorno:', returnUrl);
+  
+  // Enviar a Zoho (comentado para no enviar datos reales en prueba)
+  // sendToZoho(uEmail, uName, returnUrl);
+  console.log('  ✅ Datos listos para Zoho (envío comentado)');
+  
+  // 6. Simular retorno de Square
+  console.log('💳 Paso 6: Simulando retorno de Square...');
+  window.history.pushState({}, '', returnUrl);
+  
+  // 7. Procesar retorno y mostrar resultados
+  console.log('🔄 Paso 7: Procesando retorno de Square...');
+  checkUrlToken();
+  
+  // 8. Verificar estado final
+  setTimeout(() => {
+    console.log('📊 Paso 8: Verificando estado final...');
+    console.log('  📄 Página actual:', window.location.hash || document.querySelector('.screen:not(.hide)')?.id);
+    console.log('  📩 Email enviado:', emailEnviado);
+    console.log('  🎫 Token procesado:', token ? '✅' : '❌');
+    console.log('  📋 Datos en Zoho:', 'Listos para enviar');
+    
+    console.log('✅ PRUEBA COMPLETA FINALIZADA');
+    console.log('📌 Revisa visualmente:');
+    console.log('  • Los resultados del diagnóstico en pantalla');
+    console.log('  • El mensaje de confirmación de email');
+    console.log('  • La consola para cualquier error');
+    
+  }, 2000);
+  
+  return 'Prueba completa iniciada - revisa consola y página';
+}
+
+// ── SIMULAR RETORNO DE SQUARE ──
+function simularRetornoSquare(){
+  console.log('🎭 SIMULANDO: Retorno de Square con pago exitoso');
+  
+  // 1. Crear datos de prueba
+  uName = 'Usuario Prueba Square';
+  uEmail = 'prueba@square.com';
+  uHeight = '170';
+  answers = {'q1': 'A', 'q2': 'B', 'q3': 'C'};
+  
+  // 2. Crear diagnóstico de prueba
+  window._d = {
+    S: 'E',
+    variant: 'E1',
+    varLabel: 'Ectomorph Classic',
+    sec: 'A',
+    secLabel: 'Android Secondary'
+  };
+  
+  console.log('📊 Datos de prueba creados:');
+  console.log('  👤 Nombre:', uName);
+  console.log('  📧 Email:', uEmail);
+  console.log('  🏋️ Altura:', uHeight);
+  console.log('  🧪 Diagnóstico:', window._d);
+  
+  // 3. Generar token
+  const token = buildResultToken(window._d);
+  console.log('🎫 Token generado:', token);
+  
+  // 4. Simular URL de retorno
+  const baseUrl = window.location.href.split('?')[0];
+  const simulatedUrl = baseUrl + '?resultado=' + token;
+  console.log('🔗 URL simulada:', simulatedUrl);
+  
+  // 5. Actualizar URL sin recargar página
+  window.history.pushState({}, '', simulatedUrl);
+  
+  // 6. Ejecutar checkUrlToken manualmente
+  console.log('🔄 Ejecutando checkUrlToken...');
+  checkUrlToken();
+  
+  console.log('✅ Simulación completada - revisa si muestra resultados y envía email');
+  
+  return 'Simulación completada - revisa consola y página';
 }
 
 // ── START TEST from landing ──
