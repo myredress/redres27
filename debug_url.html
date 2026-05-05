@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug URL Parameters</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; font-family: monospace; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug URL Parameters</h1>
+    
+    <div class="debug-section">
+        <h2>URL Actual</h2>
+        <div id="currentUrl" class="result"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>Parámetros Detectados</h2>
+        <div id="params" class="result"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>Token Analysis</h2>
+        <div id="tokenAnalysis" class="result"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>Acciones</h2>
+        <button onclick="analyzeCurrentUrl()">🔍 Analizar URL Actual</button>
+        <button onclick="testWithSampleToken()">🧪 Probar con Token Sample</button>
+        <button onclick="clearResults()">🗑️ Limpiar</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function analyzeCurrentUrl() {
+            const url = window.location.href;
+            document.getElementById('currentUrl').textContent = url;
+            
+            const params = new URLSearchParams(window.location.search);
+            const paramsObj = {};
+            for (const [key, value] of params) {
+                paramsObj[key] = value;
+            }
+            
+            document.getElementById('params').textContent = JSON.stringify(paramsObj, null, 2);
+            
+            const resultado = params.get('resultado');
+            const transactionId = params.get('transactionId');
+            const orderId = params.get('orderId');
+            
+            let analysis = `🎫 resultado: ${resultado || '❌ EMPTY'}\n`;
+            analysis += `🆔 transactionId: ${transactionId || '❌ NOT FOUND'}\n`;
+            analysis += `📦 orderId: ${orderId || '❌ NOT FOUND'}`;
+            
+            document.getElementById('tokenAnalysis').textContent = analysis;
+            
+            if (!resultado) {
+                addResult('❌ Parámetro "resultado" está vacío - este es el problema principal', 'error');
+                addResult('💡 Square debería incluir el token en el parámetro resultado', 'warning');
+            } else {
+                try {
+                    const decoded = atob(resultado);
+                    const parsed = JSON.parse(decoded);
+                    addResult(`✅ Token válido: ${JSON.stringify(parsed, null, 2)}`, 'success');
+                } catch (error) {
+                    addResult(`❌ Token inválido: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function testWithSampleToken() {
+            const sampleToken = 'eyJuIjoiVGVzdCBVc2VyIiwiaCI6IjEuNzAiLCJTIjoiQSIsInYiOiJBMSIsInZMIjoiQTEiLCJzZWMiOiIiLCJzZWNMIjoiIiwiYSI6e30sInRzIjoxNzc4MDIzMDAyNDE2fQ';
+            const newUrl = window.location.origin + window.location.pathname + '?resultado=' + sampleToken;
+            
+            addResult(`🧪 Probando con URL: ${newUrl}`, 'info');
+            
+            setTimeout(() => {
+                window.location.href = newUrl;
+            }, 2000);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('currentUrl').textContent = '';
+            document.getElementById('params').textContent = '';
+            document.getElementById('tokenAnalysis').textContent = '';
+            addResult('🗑️ Debug limpiado', 'info');
+        }
+
+        // Auto-analyze on load
+        window.addEventListener('DOMContentLoaded', analyzeCurrentUrl);
+    </script>
+</body>
+</html>
