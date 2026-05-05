@@ -1550,6 +1550,10 @@ function t(es,en){return lang==='es'?es:en;}
 function goTo(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el=document.getElementById(id);
+  if (!el) {
+    console.error('❌ goTo: Element not found with id:', id);
+    return;
+  }
   el.classList.add('active');
   // Force instant scroll to absolute top
   document.documentElement.scrollTop=0;
@@ -2506,7 +2510,6 @@ function parseResultToken(token){
 
 // ── Envía lead + link de resultado a Zoho ──
 function sendToZoho(email, name, resultUrl){
-  console.log('🚀 Enviando datos a Zoho Forms...');
   
   // ZOHO FORMS — URL actualizada para evitar errores
   const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
@@ -2522,35 +2525,12 @@ function sendToZoho(email, name, resultUrl){
     'zc_gad': ''
   };
 
-  console.log('📋 Payload a enviar:', payload);
-  console.log('🌐 URL destino:', ZOHO_FORM_URL);
 
-  // Método mejorado: usar fetch con modo no-cors como fallback
-  try {
-    // Intentar primero con fetch (más moderno)
-    fetch(ZOHO_FORM_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams(payload)
-    })
-    .then(response => {
-      console.log('✅ Fetch enviado (modo no-cors)');
-      console.log('📊 Respuesta:', response);
-    })
-    .catch(error => {
-      console.log('⚠️ Fetch falló, intentando método iframe...');
-      sendToZohoViaIframe(payload, ZOHO_FORM_URL);
-    });
-  } catch (error) {
-    console.log('⚠️ Error en fetch, usando método iframe...');
-    sendToZohoViaIframe(payload, ZOHO_FORM_URL);
-  }
+  // Usar método original con iframe
+  sendToZohoViaIframe(payload, ZOHO_FORM_URL);
 }
 
-// Método alternativo con iframe (el original pero mejorado)
+// Método original con iframe para Zoho Forms
 function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   const iframeName = 'zohoSubmitFrame_' + Date.now();
   
@@ -2563,6 +2543,7 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   iframe.style.display = 'none';
   iframe.style.width = '1px';
   iframe.style.height = '1px';
+  iframe.style.border = 'none';
   document.body.appendChild(iframe);
 
   const form = document.createElement('form');
@@ -2571,21 +2552,25 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   form.target = iframeName;
   form.style.display = 'none';
   form.acceptCharset = 'UTF-8';
+  form.enctype = 'application/x-www-form-urlencoded';
 
-  // Agregar todos los campos del payload
+  // Agregar todos los campos del payload con validación
   Object.keys(payload).forEach((key) => {
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = key;
-    input.value = payload[key];
+    input.value = payload[key] || ''; // Asegurar que no sea undefined/null
     form.appendChild(input);
   });
 
   document.body.appendChild(form);
   
   // Eventos para monitorear el envío
+  let submissionTimeout;
+  
   iframe.onload = () => {
-    console.log('✅ Iframe cargado - posible envío exitoso');
+    // Iframe cargado - posible envío exitoso
+    clearTimeout(submissionTimeout);
     setTimeout(() => {
       iframe.remove();
       form.remove();
@@ -2593,12 +2578,29 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   };
   
   iframe.onerror = () => {
+    clearTimeout(submissionTimeout);
     console.error('❌ Error en iframe - posible bloqueo CORS');
+    setTimeout(() => {
+      iframe.remove();
+      form.remove();
+    }, 1000);
   };
 
+  // Timeout de seguridad por si el iframe nunca carga
+  submissionTimeout = setTimeout(() => {
+    iframe.remove();
+    form.remove();
+  }, 10000);
+
   // Enviar el formulario
-  form.submit();
-  console.log('📤 Formulario enviado via iframe');
+  try {
+    form.submit();
+  } catch (error) {
+    clearTimeout(submissionTimeout);
+    iframe.remove();
+    form.remove();
+    console.error('❌ Error al enviar formulario:', error);
+  }
 }
 
 function submitEmail(){
@@ -3054,133 +3056,6 @@ function toggleFaq(el){
   });
 }
 
-// ── TEST ZOHO FORM SUBMISSION ──
-function testZohoSubmission(){
-  console.log('🧪 Testing Zoho Form submission...');
-  console.log('⏰ Timestamp:', new Date().toISOString());
-  
-  // Test data
-  const testEmail = 'test_' + Date.now() + '@example.com';
-  const testName = 'Test User ' + Math.floor(Math.random() * 1000);
-  const testResultUrl = window.location.origin + '/result?test=' + Date.now();
-  
-  console.log('📧 Test Email:', testEmail);
-  console.log('👤 Test Name:', testName);
-  console.log('🔗 Test Result URL:', testResultUrl);
-  
-  // Verify required fields exist
-  if (!document.getElementById('uEmail')) {
-    console.error('❌ Email field not found');
-    return 'Error: Email field not found';
-  }
-  
-  // Fill form fields for testing
-  document.getElementById('uEmail').value = testEmail;
-  if (document.getElementById('uName')) {
-    document.getElementById('uName').value = testName;
-  }
-  
-  // Call the corrected sendToZoho function
-  try {
-    sendToZoho(testEmail, testName, testResultUrl);
-    console.log('✅ Zoho Form submission test initiated successfully');
-    console.log('🔍 Check browser Network tab for POST request to Zoho');
-    console.log('📊 Check Zoho Forms dashboard for new entry');
-    console.log('🔧 Using corrected method with fetch + iframe fallback');
-    
-    // Show visual feedback
-    const button = event.target;
-    if (button) {
-      button.style.background = '#28a745';
-      button.textContent = '✅ Test Sent';
-      setTimeout(() => {
-        button.style.background = '#ff6b35';
-        button.textContent = '🧪 Test Zoho';
-      }, 3000);
-    }
-    
-  } catch (error) {
-    console.error('❌ Error during Zoho submission:', error);
-    return 'Error: ' + error.message;
-  }
-  
-  // Test URL accessibility with corrected method
-  console.log('🔗 Testing URL accessibility...');
-  console.log('🌐 URL should be accessible now with corrected method');
-  
-  return '✅ Test completed - check console for details';
-}
-
-// ── DIRECT ZOHO TEST (bypass form validation) ──
-function testDirectZohoSubmission(){
-  console.log('🎯 Testing Direct Zoho submission...');
-  
-  const testData = {
-    email: 'direct_' + Date.now() + '@test.com',
-    name: 'Direct Test User',
-    resultUrl: window.location.origin + '/direct-test/' + Date.now()
-  };
-  
-  console.log('📊 Direct test data:', testData);
-  
-  // Test the iframe method directly
-  const payload = {
-    'Email': testData.email,
-    'SingleLine': testData.name,
-    'SingleLine1': testData.resultUrl,
-    'SingleLine2': 'direct_test_' + Date.now(),
-    'zf_referrer_name': window.location.hostname || 'redress27.com',
-    'zf_redirect_url': '',
-    'zc_gad': ''
-  };
-  
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
-  
-  sendToZohoViaIframe(payload, ZOHO_FORM_URL);
-  
-  console.log('🚀 Direct iframe test initiated');
-  console.log('📋 Payload:', payload);
-  
-  return 'Direct test completed';
-}
-
-// ── ADVANCED ZOHO TEST (simulate full user flow) ──
-function testFullZohoFlow(){
-  console.log('🔄 Testing full Zoho integration flow...');
-  
-  // Simulate user data
-  const userData = {
-    name: 'Full Test User',
-    email: 'fulltest_' + Date.now() + '@example.com',
-    height: '1.70',
-    result: 'A',
-    resultUrl: window.location.origin + '/result/fulltest/' + Date.now()
-  };
-  
-  console.log('👤 Simulated user data:', userData);
-  
-  // Test the complete flow
-  try {
-    // 1. Test name/email collection
-    if (document.getElementById('uName')) document.getElementById('uName').value = userData.name;
-    if (document.getElementById('uHeight')) document.getElementById('uHeight').value = userData.height;
-    if (document.getElementById('uEmail')) document.getElementById('uEmail').value = userData.email;
-    
-    // 2. Test Zoho submission
-    sendToZoho(userData.email, userData.name, userData.resultUrl);
-    
-    console.log('✅ Full flow test completed');
-    console.log('📊 Expected Zoho fields:');
-    console.log('  - Email:', userData.email);
-    console.log('  - SingleLine (Name):', userData.name);
-    console.log('  - SingleLine1 (Result URL):', userData.resultUrl);
-    console.log('  - SingleLine2 (Source): test_redress27_paid');
-    
-  } catch (error) {
-    console.error('❌ Full flow test failed:', error);
-  }
-}
-
 // ── START TEST from landing ──
 function startTest(){
   goTo('name-step');
@@ -3188,24 +3063,8 @@ function startTest(){
   window.scrollTo(0,0);
 }
 
-// Auto-run test when page loads (remove comment to enable)
-// window.addEventListener('load', () => {
-//   setTimeout(testZohoSubmission, 2000);
-// });
 </script>
 
-<!-- ZOHO FORMS TEST BUTTONS -->
-<div style="position:fixed; top:10px; right:10px; z-index:9999; display:flex; flex-direction:column; gap:5px;">
-  <div style="background:#ff6b35; color:white; padding:8px 12px; border-radius:4px; font-family:monospace; font-size:11px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3);" onclick="testZohoSubmission()" title="Test corrected Zoho submission">
-    🧪 Test Zoho
-  </div>
-  <div style="background:#007bff; color:white; padding:8px 12px; border-radius:4px; font-family:monospace; font-size:11px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3);" onclick="testFullZohoFlow()" title="Test complete user flow">
-    🔄 Full Test
-  </div>
-  <div style="background:#28a745; color:white; padding:8px 12px; border-radius:4px; font-family:monospace; font-size:11px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3);" onclick="testDirectZohoSubmission()" title="Direct iframe test (bypass validation)">
-    🎯 Direct
-  </div>
-</div>
 
 </body>
 </html>
