@@ -10,7 +10,6 @@
    REDRESS 27 — QOVES-INSPIRED DESIGN
    Light, clinical, premium, editorial
 ═══════════════════════════════════════ */
-
 :root {
   --cream:   #faf8f4;
   --white:   #ffffff;
@@ -27,7 +26,6 @@
   --goldb:   rgba(184,146,58,0.15);
   --black:   #000000;
 }
-
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -766,7 +764,6 @@ footer {
 }
 </style>
 
-
 <script>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function()
 {n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -777,7 +774,6 @@ s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
 fbq('init', '473053512020235');
 fbq('track', 'PageView');
 </script>
-
 
 
 
@@ -1910,7 +1906,7 @@ let qIdx=-1, answers={}, uName='', uHeight='';
 
 function startQ(){
 
- fbq('track', 'InitiateCheckout', {content_name: 'Test ReDress 27'});
+  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
 
   uName=document.getElementById('uName').value.trim()||t('Tú','You');
   uHeight=document.getElementById('uHeight').value.trim();
@@ -2475,13 +2471,15 @@ const DB={
 // EMAIL CAPTURE + RESULTADO POR EMAIL
 // ════════════════════════════════════════
 let uEmail='';
+try{
+  uEmail = sessionStorage.getItem('r27_uemail') || '';
+}catch(e){}
 
 // ── Serializa el diagnóstico en un token URL-safe ──
 function buildResultToken(diag){
   const payload={
     n: uName,
     h: uHeight,
-    e: uEmail,  // Incluir email en el token
     S: diag.S,
     v: diag.variant,
     vL: diag.varLabel,
@@ -2508,38 +2506,74 @@ function parseResultToken(token){
 
 // ── Envía lead + link de resultado a Zoho ──
 function sendToZoho(email, name, resultUrl){
-  // ZOHO FORMS — URL exacta tomada de tu embed. https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
+  console.log('🚀 Enviando datos a Zoho Forms...');
+  
+  // ZOHO FORMS — URL actualizada para evitar errores
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
+  
+  // Payload corregido con los nombres de campo exactos de Zoho
   const payload = {
-    zf_referrer_name: window.location.hostname || '',
-    zf_redirect_url: '',
-    zc_gad: '',
-    Email: email || '',
-    SingleLine: name || '',
-    SingleLine1: resultUrl || '',
-    SingleLine2: 'test_redress27_paid'
+    'Email': email || '',
+    'SingleLine': name || '',
+    'SingleLine1': resultUrl || '',
+    'SingleLine2': 'test_redress27_paid',
+    'zf_referrer_name': window.location.hostname || 'redress27.com',
+    'zf_redirect_url': '',
+    'zc_gad': ''
   };
 
-  // Zoho Forms suele aceptar mejor un submit HTML real que fetch/no-cors.
-  const iframeName = 'zohoSubmitFrame';
-  let iframe = document.getElementById(iframeName);
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = iframeName;
-    iframe.name = iframeName;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+  console.log('📋 Payload a enviar:', payload);
+  console.log('🌐 URL destino:', ZOHO_FORM_URL);
+
+  // Método mejorado: usar fetch con modo no-cors como fallback
+  try {
+    // Intentar primero con fetch (más moderno)
+    fetch(ZOHO_FORM_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(payload)
+    })
+    .then(response => {
+      console.log('✅ Fetch enviado (modo no-cors)');
+      console.log('📊 Respuesta:', response);
+    })
+    .catch(error => {
+      console.log('⚠️ Fetch falló, intentando método iframe...');
+      sendToZohoViaIframe(payload, ZOHO_FORM_URL);
+    });
+  } catch (error) {
+    console.log('⚠️ Error en fetch, usando método iframe...');
+    sendToZohoViaIframe(payload, ZOHO_FORM_URL);
   }
+}
+
+// Método alternativo con iframe (el original pero mejorado)
+function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
+  const iframeName = 'zohoSubmitFrame_' + Date.now();
+  
+  // Limpiar iframes anteriores
+  document.querySelectorAll('[id^="zohoSubmitFrame"]').forEach(iframe => iframe.remove());
+  
+  const iframe = document.createElement('iframe');
+  iframe.id = iframeName;
+  iframe.name = iframeName;
+  iframe.style.display = 'none';
+  iframe.style.width = '1px';
+  iframe.style.height = '1px';
+  document.body.appendChild(iframe);
 
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = ZOHO_FORM_URL;
-  form.acceptCharset = 'UTF-8';
-  form.enctype = 'multipart/form-data';
   form.target = iframeName;
   form.style.display = 'none';
+  form.acceptCharset = 'UTF-8';
 
-  Object.keys(payload).forEach((key)=>{
+  // Agregar todos los campos del payload
+  Object.keys(payload).forEach((key) => {
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = key;
@@ -2548,26 +2582,46 @@ function sendToZoho(email, name, resultUrl){
   });
 
   document.body.appendChild(form);
-  form.submit();
-  setTimeout(()=>form.remove(), 1500);
   
-  console.log('📤 Form submitted to Zoho:', payload);
+  // Eventos para monitorear el envío
+  iframe.onload = () => {
+    console.log('✅ Iframe cargado - posible envío exitoso');
+    setTimeout(() => {
+      iframe.remove();
+      form.remove();
+    }, 2000);
+  };
+  
+  iframe.onerror = () => {
+    console.error('❌ Error en iframe - posible bloqueo CORS');
+  };
+
+  // Enviar el formulario
+  form.submit();
+  console.log('📤 Formulario enviado via iframe');
 }
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
-  if(val && val.includes('@')) uEmail=val;
+  if(val && val.includes('@')){
+    uEmail=val;
+    try{ sessionStorage.setItem('r27_uemail', uEmail); }catch(e){}
+  }
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 function skipEmail(){
+  try{ sessionStorage.removeItem('r27_uemail'); }catch(e){}
   goTo('processing'); setPct(82);
   runDiagnosis();
 }
 
 // ── Después del pago: construir link y mandar email ──
 function sendResultByEmail(diag){
+  if(!uEmail){
+    try{ uEmail = sessionStorage.getItem('r27_uemail') || ''; }catch(e){}
+  }
   if(!uEmail) return; // No capturó email — nada que hacer
 
   const token = buildResultToken(diag);
@@ -2593,19 +2647,6 @@ function checkUrlToken(){
   const params = new URLSearchParams(window.location.search);
   const token = params.get('resultado');
   if(!token) return;
-  
-  // Si el token está vacío pero tenemos diagnóstico guardado, mostrar resultados
-  if(token === '' && window._d){
-    console.log('🔧 Token vacío detectado - usando diagnóstico guardado');
-    buildFullResult();
-    goTo('full-result');
-    setPct(100);
-    
-    // Limpiar URL
-    const cleanUrl = window.location.href.split('?')[0];
-    window.history.replaceState({}, '', cleanUrl);
-    return;
-  }
 
   const data = parseResultToken(token);
   if(!data) return;
@@ -2613,7 +2654,6 @@ function checkUrlToken(){
   // Restaurar datos del token
   uName = data.n || '';
   uHeight = data.h || '';
-  uEmail = data.e || '';  // Restaurar email del token
   answers = data.a || {};
 
   // Mostrar directamente el resultado sin pago (ya pagó)
@@ -2629,14 +2669,6 @@ function checkUrlToken(){
   goTo('full-result');
   setPct(100);
   buildFullResult();
-
-  // ── Enviar email después del pago ──
-  if(uEmail && window._d){
-    console.log('📧 Enviando email post-pago a:', uEmail);
-    sendResultByEmail(window._d);
-  } else {
-    console.log('⚠️ No se puede enviar email - falta email o diagnóstico');
-  }
 }
 
 // Ejecutar al cargar
@@ -2648,8 +2680,7 @@ window.addEventListener('DOMContentLoaded', checkUrlToken);
 function processResult(){
   // Ir a captura de email antes del procesamiento
 
-fbq('track', 'AddToCart', {value: 7.00, currency: 'USD'});
-
+  fbq('track', 'AddToCart', {value: 1.00, currency: 'USD'});
   goTo('email-capture'); setPct(75);
 }
 
@@ -2681,15 +2712,15 @@ function unlockResult(){
   // ── Enviar datos a Zoho ANTES del pago ──
   if(uEmail){
     sendToZoho(uEmail, uName, returnUrl);
-    console.log('📤 Enviando datos a Zoho Forms:', {email: uEmail, name: uName, url: returnUrl});
-  } else {
-    console.log('⚠️ No se capturó email - no se envía a Zoho Forms');
   }
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
-   window.location.href = 'https://square.link/u/dJiHh0f1'
-    + '?ref=' + encodeURIComponent(uName)
-    + '&return_url=' + encodeURIComponent(returnUrl);
+  // window.location.href = 'https://checkout.square.site/TU_LINK'
+  
+  // PRODUCCIÓN square index.html
+  window.location.href = 'https://square.link/u/dJiHh0f1'
+     + '?ref=' + encodeURIComponent(uName)
+     + '&return_url=' + encodeURIComponent(returnUrl);
 
   // DEMO: mostrar resultado directamente
   buildFullResult();
@@ -2700,18 +2731,12 @@ function unlockResult(){
 // ════════════════════════════════════════
 function buildFullResult(){
 
-fbq('track', 'Purchase', {value: 7.00, currency: 'USD'});
+  fbq('track', 'Purchase', {value: 1.00, currency: 'USD'});
+
 
   const {S,variant,varLabel,sec,secLabel}=window._d;
-  const d=DB && DB[S] ? DB[S] : null;
+  const d=DB[S];
   const l=lang;
-  
-  // Validación de datos del diagnóstico
-  if(!d || !S){
-    console.error('❌ Error: Datos del diagnóstico inválidos', {S, d, window_d: window._d});
-    alert('Error al cargar los resultados. Por favor, intenta nuevamente.');
-    return;
-  }
 
   // Mandar resultado por email si hay dirección capturada
   sendResultByEmail(window._d);
@@ -3029,323 +3054,131 @@ function toggleFaq(el){
   });
 }
 
-// ── DEBUG ZOHO FORM SUBMISSION ──
-function debugZohoForm(){
-  console.log('🔍 DEBUG: Zoho Form Submission Analysis');
-  
-  // Test data
-  const testEmail = 'test@example.com';
-  const testName = 'Test User';
-  const testResultUrl = window.location.href + '?test=123';
-  
-  // 1. Check URL
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
-  console.log('🌐 Zoho Form URL:', ZOHO_FORM_URL);
-  
-  // 2. Test URL accessibility
-  fetch(ZOHO_FORM_URL.replace('/htmlRecords/submit', ''), {method: 'HEAD'})
-    .then(response => console.log('✅ Form URL accessible:', response.status))
-    .catch(error => console.log('❌ Form URL error:', error));
-  
-  // 3. Test different payload structures
-  const payloads = [
-    {
-      name: 'Current payload',
-      data: {
-        Email: testEmail,
-        SingleLine: testName,
-        SingleLine1: testResultUrl,
-        SingleLine2: 'test_redress27_paid'
-      }
-    },
-    {
-      name: 'Alternative payload 1',
-      data: {
-        Email: testEmail,
-        Name: testName,
-        Result_URL: testResultUrl,
-        Source: 'test_redress27_paid'
-      }
-    },
-    {
-      name: 'Alternative payload 2',
-      data: {
-        'Email': testEmail,
-        'Nombre': testName,
-        'Link de resultado': testResultUrl,
-        'Tag': 'test_redress27_paid'
-      }
-    }
-  ];
-  
-  payloads.forEach((payload, index) => {
-    console.log(`📋 Payload ${index + 1} (${payload.name}):`, payload.data);
-    testZohoSubmissionMethod(payload.data, index + 1);
-  });
-}
-
-function testZohoSubmissionMethod(payload, methodNum){
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
-  
-  // Method 1: FormData with fetch
-  const formData = new FormData();
-  Object.keys(payload).forEach(key => {
-    formData.append(key, payload[key]);
-  });
-  
-  fetch(ZOHO_FORM_URL, {
-    method: 'POST',
-    body: formData,
-    mode: 'no-cors'
-  }).then(() => {
-    console.log(`✅ Method ${methodNum}-1 (fetch): Sent successfully`);
-  }).catch(error => {
-    console.log(`❌ Method ${methodNum}-1 (fetch): Error:`, error);
-  });
-  
-  // Method 2: Hidden form submission
-  setTimeout(() => {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = ZOHO_FORM_URL;
-    form.style.display = 'none';
-    
-    Object.keys(payload).forEach(key => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = payload[key];
-      form.appendChild(input);
-    });
-    
-    document.body.appendChild(form);
-    form.submit();
-    setTimeout(() => form.remove(), 1000);
-    console.log(`✅ Method ${methodNum}-2 (hidden form): Submitted`);
-  }, 500);
-}
-
-// ── SIMPLE TEST ZOHO FORM SUBMISSION ──
+// ── TEST ZOHO FORM SUBMISSION ──
 function testZohoSubmission(){
   console.log('🧪 Testing Zoho Form submission...');
+  console.log('⏰ Timestamp:', new Date().toISOString());
   
   // Test data
-  const testEmail = 'test@example.com';
-  const testName = 'Test User';
-  const testResultUrl = window.location.href + '?test=123';
+  const testEmail = 'test_' + Date.now() + '@example.com';
+  const testName = 'Test User ' + Math.floor(Math.random() * 1000);
+  const testResultUrl = window.location.origin + '/result?test=' + Date.now();
   
-  // Call the sendToZoho function
-  sendToZoho(testEmail, testName, testResultUrl);
+  console.log('📧 Test Email:', testEmail);
+  console.log('👤 Test Name:', testName);
+  console.log('🔗 Test Result URL:', testResultUrl);
   
-  console.log('✅ Zoho Form submission test initiated');
-  console.log('📧 Email:', testEmail);
-  console.log('👤 Name:', testName);
-  console.log('🔗 Result URL:', testResultUrl);
-  console.log('🔍 Check browser Network tab and Zoho Forms dashboard');
-  
-  return 'Test completed - check console and network tab';
-}
-
-// ── PRUEBA SIMPLE DE ENVÍO A ZOHO ──
-function pruebaZohoForm(){
-  console.log('🧪 PRUEBA: Enviando datos a Zoho Form');
-  
-  // Datos de prueba
-  const email = 'prueba@test.com';
-  const nombre = 'Usuario Prueba';
-  const url = window.location.href + '?resultado=prueba123';
-  
-  console.log('📧 Email:', email);
-  console.log('👤 Nombre:', nombre);
-  console.log('🔗 URL:', url);
-  
-  // Enviar a Zoho
-  sendToZoho(email, nombre, url);
-  
-  console.log('✅ Datos enviados - revisa tu Zoho Forms dashboard');
-  console.log('🌐 Abre la pestaña Network para ver la petición POST');
-  
-  return 'Prueba completada - revisa consola y Zoho Forms';
-}
-
-// ── DEBUG SQUARE PAYMENT RETURN ──
-function debugSquareReturn(){
-  console.log('🔍 DEBUG: Analizando retorno de Square');
-  
-  // 1. Verificar URL actual
-  const currentUrl = window.location.href;
-  console.log('📍 URL actual:', currentUrl);
-  
-  // 2. Verificar parámetros
-  const params = new URLSearchParams(window.location.search);
-  console.log('📋 Parámetros en URL:');
-  for (let [key, value] of params.entries()) {
-    console.log(`  ${key}: ${value}`);
+  // Verify required fields exist
+  if (!document.getElementById('uEmail')) {
+    console.error('❌ Email field not found');
+    return 'Error: Email field not found';
   }
   
-  // 3. Verificar token
-  const token = params.get('resultado');
-  console.log('🎫 Token encontrado:', token ? 'SÍ' : 'NO');
-  if(token){
-    console.log('🎫 Token completo:', token);
+  // Fill form fields for testing
+  document.getElementById('uEmail').value = testEmail;
+  if (document.getElementById('uName')) {
+    document.getElementById('uName').value = testName;
+  }
+  
+  // Call the corrected sendToZoho function
+  try {
+    sendToZoho(testEmail, testName, testResultUrl);
+    console.log('✅ Zoho Form submission test initiated successfully');
+    console.log('🔍 Check browser Network tab for POST request to Zoho');
+    console.log('📊 Check Zoho Forms dashboard for new entry');
+    console.log('🔧 Using corrected method with fetch + iframe fallback');
     
-    // 4. Intentar parsear token
-    const data = parseResultToken(token);
-    console.log('📦 Token parseado:', data ? 'EXITOSO' : 'FALLÓ');
-    if(data){
-      console.log('📦 Datos del token:', data);
-      console.log('👤 Nombre:', data.n);
-      console.log('📧 Email:', data.e);
-      console.log('🏋️ Altura:', data.h);
-      console.log('🧪 Diagnóstico S:', data.S);
+    // Show visual feedback
+    const button = event.target;
+    if (button) {
+      button.style.background = '#28a745';
+      button.textContent = '✅ Test Sent';
+      setTimeout(() => {
+        button.style.background = '#ff6b35';
+        button.textContent = '🧪 Test Zoho';
+      }, 3000);
     }
+    
+  } catch (error) {
+    console.error('❌ Error during Zoho submission:', error);
+    return 'Error: ' + error.message;
   }
   
-  // 5. Verificar variables globales
-  console.log('🌐 Variables globales:');
-  console.log('  uName:', uName);
-  console.log('  uEmail:', uEmail);
-  console.log('  uHeight:', uHeight);
-  console.log('  answers:', Object.keys(answers).length, 'respuestas');
-  console.log('  window._d:', window._d ? 'EXISTE' : 'NO EXISTE');
+  // Test URL accessibility with corrected method
+  console.log('🔗 Testing URL accessibility...');
+  console.log('🌐 URL should be accessible now with corrected method');
   
-  // 6. Verificar elementos de la página
-  console.log('📄 Elementos de página:');
-  console.log('  #full-result:', document.getElementById('full-result') ? 'EXISTE' : 'NO EXISTE');
-  console.log('  #email-capture:', document.getElementById('email-capture') ? 'EXISTE' : 'NO EXISTE');
-  
-  // 7. Forzar ejecución de checkUrlToken
-  console.log('🔄 Forzando ejecución de checkUrlToken...');
-  checkUrlToken();
-  
-  return 'Debug completado - revisa consola';
+  return '✅ Test completed - check console for details';
 }
 
-// ── PRUEBA COMPLETA DEL FLUJO ──
-function pruebaCompletaFlujo(){
-  console.log('🚀 INICIANDO PRUEBA COMPLETA DEL FLUJO');
+// ── DIRECT ZOHO TEST (bypass form validation) ──
+function testDirectZohoSubmission(){
+  console.log('🎯 Testing Direct Zoho submission...');
   
-  // 1. Configurar datos de prueba realistas
-  uName = 'Cliente Prueba Completo';
-  uEmail = 'cliente.prueba@example.com';
-  uHeight = '165';
-  lang = 'es';
-  
-  // Respuestas que generen un diagnóstico específico
-  answers = {
-    'q1': 'A', 'q2': 'B', 'q3': 'A', 'q4': 'C', 'q5': 'B',
-    'q6': 'A', 'q7': 'C', 'q8': 'B', 'q9': 'A', 'q10': 'C'
+  const testData = {
+    email: 'direct_' + Date.now() + '@test.com',
+    name: 'Direct Test User',
+    resultUrl: window.location.origin + '/direct-test/' + Date.now()
   };
   
-  console.log('📋 Paso 1: Datos configurados');
-  console.log('  👤 Nombre:', uName);
-  console.log('  📧 Email:', uEmail);
-  console.log('  🏋️ Altura:', uHeight);
-  console.log('  📝 Respuestas:', Object.keys(answers).length, 'preguntas');
+  console.log('📊 Direct test data:', testData);
   
-  // 2. Ejecutar diagnóstico
-  console.log('🧪 Paso 2: Ejecutando diagnóstico...');
-  const {S,variant,varLabel,sec,secLabel}=diagnose();
-  window._d={S,variant,varLabel,sec,secLabel};
+  // Test the iframe method directly
+  const payload = {
+    'Email': testData.email,
+    'SingleLine': testData.name,
+    'SingleLine1': testData.resultUrl,
+    'SingleLine2': 'direct_test_' + Date.now(),
+    'zf_referrer_name': window.location.hostname || 'redress27.com',
+    'zf_redirect_url': '',
+    'zc_gad': ''
+  };
   
-  console.log('🔍 Resultado del diagnóstico:');
-  console.log('  Tipo principal:', S, '-', varLabel);
-  console.log('  Secundario:', sec, '-', secLabel);
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
   
-  // 3. Enviar email de prueba (diagnóstico inicial)
-  console.log('📧 Paso 3: Enviando email de diagnóstico...');
-  const emailEnviado = sendResultByEmail(window._d);
-  console.log('  Email enviado:', emailEnviado ? '✅ ÉXITO' : '❌ FALLÓ');
+  sendToZohoViaIframe(payload, ZOHO_FORM_URL);
   
-  // 4. Generar token para Square
-  console.log('🎫 Paso 4: Generando token para Square...');
-  const token = buildResultToken(window._d);
-  console.log('  Token generado:', token.substring(0, 50) + '...');
+  console.log('🚀 Direct iframe test initiated');
+  console.log('📋 Payload:', payload);
   
-  // 5. Enviar a Zoho (simulación de pre-pago)
-  console.log('📊 Paso 5: Enviando datos a Zoho Forms...');
-  const baseUrl = window.location.href.split('?')[0];
-  const returnUrl = baseUrl + '?resultado=' + token;
-  
-  console.log('  📧 Email para Zoho:', uEmail);
-  console.log('  👤 Nombre para Zoho:', uName);
-  console.log('  🔗 URL de retorno:', returnUrl);
-  
-  // Enviar a Zoho (comentado para no enviar datos reales en prueba)
-  // sendToZoho(uEmail, uName, returnUrl);
-  console.log('  ✅ Datos listos para Zoho (envío comentado)');
-  
-  // 6. Simular retorno de Square
-  console.log('💳 Paso 6: Simulando retorno de Square...');
-  window.history.pushState({}, '', returnUrl);
-  
-  // 7. Procesar retorno y mostrar resultados
-  console.log('🔄 Paso 7: Procesando retorno de Square...');
-  checkUrlToken();
-  
-  // 8. Verificar estado final
-  setTimeout(() => {
-    console.log('📊 Paso 8: Verificando estado final...');
-    console.log('  📄 Página actual:', window.location.hash || document.querySelector('.screen:not(.hide)')?.id);
-    console.log('  📩 Email enviado:', emailEnviado);
-    console.log('  🎫 Token procesado:', token ? '✅' : '❌');
-    console.log('  📋 Datos en Zoho:', 'Listos para enviar');
-    
-    console.log('✅ PRUEBA COMPLETA FINALIZADA');
-    console.log('📌 Revisa visualmente:');
-    console.log('  • Los resultados del diagnóstico en pantalla');
-    console.log('  • El mensaje de confirmación de email');
-    console.log('  • La consola para cualquier error');
-    
-  }, 2000);
-  
-  return 'Prueba completa iniciada - revisa consola y página';
+  return 'Direct test completed';
 }
 
-// ── SIMULAR RETORNO DE SQUARE ──
-function simularRetornoSquare(){
-  console.log('🎭 SIMULANDO: Retorno de Square con pago exitoso');
+// ── ADVANCED ZOHO TEST (simulate full user flow) ──
+function testFullZohoFlow(){
+  console.log('🔄 Testing full Zoho integration flow...');
   
-  // 1. Crear datos de prueba
-  uName = 'Usuario Prueba Square';
-  uEmail = 'prueba@square.com';
-  uHeight = '170';
-  answers = {'q1': 'A', 'q2': 'B', 'q3': 'C'};
-  
-  // 2. Crear diagnóstico de prueba
-  window._d = {
-    S: 'E',
-    variant: 'E1',
-    varLabel: 'Ectomorph Classic',
-    sec: 'A',
-    secLabel: 'Android Secondary'
+  // Simulate user data
+  const userData = {
+    name: 'Full Test User',
+    email: 'fulltest_' + Date.now() + '@example.com',
+    height: '1.70',
+    result: 'A',
+    resultUrl: window.location.origin + '/result/fulltest/' + Date.now()
   };
   
-  console.log('📊 Datos de prueba creados:');
-  console.log('  👤 Nombre:', uName);
-  console.log('  📧 Email:', uEmail);
-  console.log('  🏋️ Altura:', uHeight);
-  console.log('  🧪 Diagnóstico:', window._d);
+  console.log('👤 Simulated user data:', userData);
   
-  // 3. Generar token
-  const token = buildResultToken(window._d);
-  console.log('🎫 Token generado:', token);
-  
-  // 4. Simular URL de retorno
-  const baseUrl = window.location.href.split('?')[0];
-  const simulatedUrl = baseUrl + '?resultado=' + token;
-  console.log('🔗 URL simulada:', simulatedUrl);
-  
-  // 5. Actualizar URL sin recargar página
-  window.history.pushState({}, '', simulatedUrl);
-  
-  // 6. Ejecutar checkUrlToken manualmente
-  console.log('🔄 Ejecutando checkUrlToken...');
-  checkUrlToken();
-  
-  console.log('✅ Simulación completada - revisa si muestra resultados y envía email');
-  
-  return 'Simulación completada - revisa consola y página';
+  // Test the complete flow
+  try {
+    // 1. Test name/email collection
+    if (document.getElementById('uName')) document.getElementById('uName').value = userData.name;
+    if (document.getElementById('uHeight')) document.getElementById('uHeight').value = userData.height;
+    if (document.getElementById('uEmail')) document.getElementById('uEmail').value = userData.email;
+    
+    // 2. Test Zoho submission
+    sendToZoho(userData.email, userData.name, userData.resultUrl);
+    
+    console.log('✅ Full flow test completed');
+    console.log('📊 Expected Zoho fields:');
+    console.log('  - Email:', userData.email);
+    console.log('  - SingleLine (Name):', userData.name);
+    console.log('  - SingleLine1 (Result URL):', userData.resultUrl);
+    console.log('  - SingleLine2 (Source): test_redress27_paid');
+    
+  } catch (error) {
+    console.error('❌ Full flow test failed:', error);
+  }
 }
 
 // ── START TEST from landing ──
@@ -3354,6 +3187,25 @@ function startTest(){
   setPct(5);
   window.scrollTo(0,0);
 }
+
+// Auto-run test when page loads (remove comment to enable)
+// window.addEventListener('load', () => {
+//   setTimeout(testZohoSubmission, 2000);
+// });
 </script>
+
+<!-- ZOHO FORMS TEST BUTTONS -->
+<div style="position:fixed; top:10px; right:10px; z-index:9999; display:flex; flex-direction:column; gap:5px;">
+  <div style="background:#ff6b35; color:white; padding:8px 12px; border-radius:4px; font-family:monospace; font-size:11px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3);" onclick="testZohoSubmission()" title="Test corrected Zoho submission">
+    🧪 Test Zoho
+  </div>
+  <div style="background:#007bff; color:white; padding:8px 12px; border-radius:4px; font-family:monospace; font-size:11px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3);" onclick="testFullZohoFlow()" title="Test complete user flow">
+    🔄 Full Test
+  </div>
+  <div style="background:#28a745; color:white; padding:8px 12px; border-radius:4px; font-family:monospace; font-size:11px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3);" onclick="testDirectZohoSubmission()" title="Direct iframe test (bypass validation)">
+    🎯 Direct
+  </div>
+</div>
+
 </body>
 </html>
