@@ -2646,9 +2646,17 @@ function sendResultByEmail(diag){
 
 // ── Al cargar la página: verificar si hay token en la URL ──
 function checkUrlToken(){
+  console.log('🔍 Checking URL for resultado token...');
+  console.log('📋 Current URL:', window.location.href);
+  
   const params = new URLSearchParams(window.location.search);
   const token = params.get('resultado');
-  if(!token) return;
+  console.log('🎫 Token found:', token);
+  
+  if(!token) {
+    console.log('❌ No resultado token found in URL');
+    return;
+  }
 
   const data = parseResultToken(token);
   if(!data) return;
@@ -2674,7 +2682,14 @@ function checkUrlToken(){
 }
 
 // Ejecutar al cargar
-window.addEventListener('DOMContentLoaded', checkUrlToken);
+window.addEventListener('DOMContentLoaded', function() {
+  try {
+    checkUrlToken();
+  } catch (error) {
+    console.error('❌ Error in checkUrlToken:', error);
+    console.log('🔍 Attempting to continue without token processing...');
+  }
+});
 
 // ════════════════════════════════════════
 // PROCESS RESULT
@@ -2706,10 +2721,17 @@ function runDiagnosis(){
 // UNLOCK — conectar a Square en producción
 // ════════════════════════════════════════
 function unlockResult(){
+  console.log('🔓 Starting unlockResult...');
+  
   // ── Construir token del resultado para incluirlo en la URL de Square ──
   const diag = window._d;
+  console.log('📋 Diagnosis data:', diag);
+  
   const token = buildResultToken(diag);
+  console.log('🎫 Generated token:', token);
+  
   const returnUrl = window.location.href.split('?')[0] + '?resultado=' + token;
+  console.log('🔗 Return URL:', returnUrl);
 
   // ── Enviar datos a Zoho ANTES del pago ──
   if(uEmail){
@@ -2720,12 +2742,18 @@ function unlockResult(){
   // window.location.href = 'https://checkout.square.site/TU_LINK'
   
   // PRODUCCIÓN square index.html
-  window.location.href = 'https://square.link/u/dJiHh0f1'
+  const squareUrl = 'https://square.link/u/dJiHh0f1'
      + '?ref=' + encodeURIComponent(uName)
-     + '&return_url=' + encodeURIComponent(returnUrl);
-
-  // DEMO: mostrar resultado directamente
-  buildFullResult();
+     + '&return_url=' + encodeURIComponent(window.location.href.split('?')[0])
+     + '&resultado=' + encodeURIComponent(token);
+  
+  console.log('🛒 Square URL:', squareUrl);
+  
+  // PRODUCCIÓN: descomentar para activar pago real
+  window.location.href = squareUrl;
+  
+  // DEMO: comentar en producción
+  // buildFullResult();
 }
 
 // ════════════════════════════════════════
