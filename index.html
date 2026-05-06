@@ -2512,7 +2512,7 @@ function parseResultToken(token){
 function sendToZoho(email, name, resultUrl){
   
   // ZOHO FORMS — URL actualizada para evitar errores
-  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
+  const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
   
   // Payload corregido con los nombres de campo exactos de Zoho
   const payload = {
@@ -2525,12 +2525,11 @@ function sendToZoho(email, name, resultUrl){
     'zc_gad': ''
   };
 
-
   // Usar método original con iframe
   sendToZohoViaIframe(payload, ZOHO_FORM_URL);
 }
 
-// Método original con iframe para Zoho Forms
+// Método con iframe y fallback para Zoho Forms
 function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   const iframeName = 'zohoSubmitFrame_' + Date.now();
   
@@ -2543,7 +2542,13 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   iframe.style.display = 'none';
   iframe.style.width = '1px';
   iframe.style.height = '1px';
-  iframe.style.border = 'none';
+  
+  // Agregar listener para detectar errores
+  iframe.onerror = function() {
+    console.warn('⚠️ Zoho iframe failed - trying alternative endpoint');
+    tryAlternativeZohoEndpoint(payload);
+  };
+  
   document.body.appendChild(iframe);
 
   const form = document.createElement('form');
@@ -2552,56 +2557,45 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   form.target = iframeName;
   form.style.display = 'none';
   form.acceptCharset = 'UTF-8';
-  form.enctype = 'application/x-www-form-urlencoded';
 
-  // Agregar todos los campos del payload con validación
-  Object.keys(payload).forEach((key) => {
+  // Agregar campos del payload
+  Object.keys(payload).forEach(key => {
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = key;
-    input.value = payload[key] || ''; // Asegurar que no sea undefined/null
+    input.value = payload[key];
     form.appendChild(input);
   });
 
   document.body.appendChild(form);
-  
-  // Eventos para monitorear el envío
-  let submissionTimeout;
-  
-  iframe.onload = () => {
-    // Iframe cargado - posible envío exitoso
-    clearTimeout(submissionTimeout);
-    setTimeout(() => {
-      iframe.remove();
-      form.remove();
-    }, 2000);
-  };
-  
+  form.submit();
+
+  // Timeout de seguridad por si el iframe nunca carga
+  const submissionTimeout = setTimeout(() => {
+    console.warn('⚠️ Zoho submission timeout');
+    iframe.remove();
+    form.remove();
+  }, 8000);
+
+  // Listener para errores del iframe
   iframe.onerror = () => {
     clearTimeout(submissionTimeout);
-    console.error('❌ Error en iframe - posible bloqueo CORS');
+    console.warn('⚠️ Zoho iframe error');
     setTimeout(() => {
       iframe.remove();
       form.remove();
     }, 1000);
   };
 
-  // Timeout de seguridad por si el iframe nunca carga
-  submissionTimeout = setTimeout(() => {
-    iframe.remove();
-    form.remove();
+  // Limpiar después de timeout
+  setTimeout(() => {
+    try {
+      document.getElementById(iframeName)?.remove();
+      form.remove();
+    } catch(e) {}
   }, 10000);
-
-  // Enviar el formulario
-  try {
-    form.submit();
-  } catch (error) {
-    clearTimeout(submissionTimeout);
-    iframe.remove();
-    form.remove();
-    console.error('❌ Error al enviar formulario:', error);
-  }
 }
+
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
