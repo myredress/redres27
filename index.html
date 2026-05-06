@@ -2694,7 +2694,7 @@ function checkUrlToken(){
 
   // Obtener datos del resultado para mostrar
   let resultData;
-  if(token && !data) {
+  if(token && answers) {
     // Usar datos del token recuperado de sessionStorage
     const tokenData = parseResultToken(token);
     resultData = {
