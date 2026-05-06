@@ -2510,11 +2510,8 @@ function parseResultToken(token){
 
 // ── Envía lead + link de resultado a Zoho ──
 function sendToZoho(email, name, resultUrl){
-  
-  // ZOHO FORMS — URL actualizada para evitar errores
   const ZOHO_FORM_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/iTissy3co5Nrg7gEN0JEjxX_AWutsn2JPUc0x80VO5M/htmlRecords/submit';
   
-  // Payload corregido con los nombres de campo exactos de Zoho
   const payload = {
     'Email': email || '',
     'SingleLine': name || '',
@@ -2525,7 +2522,6 @@ function sendToZoho(email, name, resultUrl){
     'zc_gad': ''
   };
 
-  // Usar método original con iframe
   sendToZohoViaIframe(payload, ZOHO_FORM_URL);
 }
 
@@ -2543,9 +2539,7 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   iframe.style.width = '1px';
   iframe.style.height = '1px';
   
-  // Agregar listener para detectar errores
   iframe.onerror = function() {
-    console.warn('⚠️ Zoho iframe failed - trying alternative endpoint');
     tryAlternativeZohoEndpoint(payload);
   };
   
@@ -2570,36 +2564,17 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   document.body.appendChild(form);
   form.submit();
 
-  // Timeout de seguridad por si el iframe nunca carga
-  const submissionTimeout = setTimeout(() => {
-    console.warn('⚠️ Zoho submission timeout');
-    iframe.remove();
-    form.remove();
-  }, 8000);
-
-  // Listener para errores del iframe
-  iframe.onerror = () => {
-    clearTimeout(submissionTimeout);
-    console.warn('⚠️ Zoho iframe error');
-    setTimeout(() => {
-      iframe.remove();
-      form.remove();
-    }, 1000);
-  };
-
-  // Limpiar después de timeout
+  // Timeout de seguridad y limpieza
   setTimeout(() => {
     try {
       document.getElementById(iframeName)?.remove();
       form.remove();
     } catch(e) {}
-  }, 10000);
+  }, 8000);
 }
 
 // Función de fallback para endpoint alternativo de Zoho
 function tryAlternativeZohoEndpoint(payload) {
-  console.log('🔄 Trying alternative Zoho endpoint...');
-  
   // Endpoint alternativo con diferente formato
   const ALT_ZOHO_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
   
@@ -2612,27 +2587,16 @@ function tryAlternativeZohoEndpoint(payload) {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams(payload)
-    }).then(() => {
-      console.log('✅ Alternative Zoho submission sent');
-    }).catch(error => {
-      console.warn('⚠️ Alternative Zoho submission failed:', error);
+    }).catch(() => {
       logZohoDataForLater(payload);
     });
   } catch(error) {
-    console.warn('⚠️ Fetch fallback failed:', error);
     logZohoDataForLater(payload);
   }
 }
 
 // Función para guardar datos localmente si todo falla
 function logZohoDataForLater(payload) {
-  console.log('📝 Zoho data saved locally:', {
-    ...payload,
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    url: window.location.href
-  });
-  
   // Guardar en localStorage para recuperación futura
   try {
     const savedData = JSON.parse(localStorage.getItem('zoho_pending_data') || '[]');
@@ -2641,9 +2605,8 @@ function logZohoDataForLater(payload) {
       timestamp: new Date().toISOString()
     });
     localStorage.setItem('zoho_pending_data', JSON.stringify(savedData));
-    console.log('💾 Data saved to localStorage for later submission');
   } catch(e) {
-    console.warn('⚠️ Could not save to localStorage:', e);
+    // Silently fail - no mostrar errores en producción
   }
 }
 
@@ -2675,15 +2638,12 @@ function sendResultByEmail(diag){
   const baseUrl = window.location.href.split('?')[0]; // URL limpia sin params
   const resultUrl = baseUrl + '?resultado=' + token;
 
-  // Mandar a Zoho con manejo robusto de errores
+  // Enviar a Zoho con manejo robusto de errores
   try {
     sendToZoho(uEmail, uName, resultUrl);
-    console.log('✅ Zoho submission initiated');
   } catch(error) {
-    console.warn('⚠️ Zoho submission failed:', error.message);
-    // No bloquear la experiencia si Zoho falla
+    // Silently fail - no bloquear la experiencia si Zoho falla
   }
-  console.log('✅ Data sent to Zoho successfully');
 
   // Mostrar confirmación discreta en pantalla de resultado
   const note = document.createElement('div');
