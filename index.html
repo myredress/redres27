@@ -2630,8 +2630,14 @@ function sendResultByEmail(diag){
   const baseUrl = window.location.href.split('?')[0]; // URL limpia sin params
   const resultUrl = baseUrl + '?resultado=' + token;
 
-  // Mandar a Zoho
-  sendToZoho(uEmail, uName, resultUrl);
+  // Mandar a Zoho con manejo de errores
+  try {
+    sendToZoho(uEmail, uName, resultUrl);
+    console.log('✅ Data sent to Zoho successfully');
+  } catch(error) {
+    console.warn('⚠️ Zoho submission failed:', error.message);
+    // No bloquear la muestra del resultado si Zoho falla
+  }
 
   // Mostrar confirmación discreta en pantalla de resultado
   const note = document.createElement('div');
@@ -2778,7 +2784,13 @@ function unlockResult(){
 
   // ── Enviar datos a Zoho ANTES del pago ──
   if(uEmail){
-    sendToZoho(uEmail, uName, returnUrl);
+    try {
+      sendToZoho(uEmail, uName, returnUrl);
+      console.log('✅ Pre-payment data sent to Zoho');
+    } catch(error) {
+      console.warn('⚠️ Pre-payment Zoho submission failed:', error.message);
+      // Continuar con el proceso de pago
+    }
   }
 
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
