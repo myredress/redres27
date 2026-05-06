@@ -2650,12 +2650,30 @@ function checkUrlToken(){
   console.log('📋 Current URL:', window.location.href);
   
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('resultado');
+  let token = params.get('resultado');
   console.log('🎫 Token found:', token);
   
+  // Fallback: usar transactionId como resultado si está vacío
   if(!token) {
-    console.log('❌ No resultado token found in URL');
-    return;
+    const transactionId = params.get('transactionId');
+    const customId = params.get('custom_id');
+    const fallbackId = customId || transactionId;
+    console.log('🔄 Using fallback ID:', fallbackId);
+    
+    if(fallbackId) {
+      // Intentar recuperar token desde localStorage usando ID
+      const savedToken = localStorage.getItem('redress_token_' + fallbackId);
+      if(savedToken) {
+        token = savedToken;
+        console.log('✅ Token recovered from localStorage:', token);
+      } else {
+        console.log('❌ No saved token found for ID:', fallbackId);
+        return;
+      }
+    } else {
+      console.log('❌ No resultado token, transactionId or custom_id found in URL');
+      return;
+    }
   }
 
   const data = parseResultToken(token);
@@ -2741,11 +2759,16 @@ function unlockResult(){
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
   // window.location.href = 'https://checkout.square.site/TU_LINK'
   
+  // Guardar token en localStorage con transactionId simulado
+  const mockTransactionId = 'redress_' + Date.now();
+  localStorage.setItem('redress_token_' + mockTransactionId, token);
+  console.log('💾 Token saved with ID:', mockTransactionId);
+  
   // PRODUCCIÓN square index.html
   const squareUrl = 'https://square.link/u/dJiHh0f1'
      + '?ref=' + encodeURIComponent(uName)
-     + '&return_url=' + encodeURIComponent(window.location.href.split('?')[0])
-     + '&resultado=' + encodeURIComponent(token);
+     + '&return_url=' + encodeURIComponent(window.location.href.split('?')[0]) 
+     + '&custom_id=' + mockTransactionId;
   
   console.log('🛒 Square URL:', squareUrl);
   
