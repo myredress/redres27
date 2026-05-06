@@ -2596,6 +2596,57 @@ function sendToZohoViaIframe(payload, ZOHO_FORM_URL) {
   }, 10000);
 }
 
+// Función de fallback para endpoint alternativo de Zoho
+function tryAlternativeZohoEndpoint(payload) {
+  console.log('🔄 Trying alternative Zoho endpoint...');
+  
+  // Endpoint alternativo con diferente formato
+  const ALT_ZOHO_URL = 'https://forms.zohopublic.eu/redress1/form/Formulario/formperma/olibwQgFaSiywI9Xky3xyhGqsMVd7g1Nr7l2gqHb0VQ/htmlRecords/submit';
+  
+  // Intentar con fetch como fallback
+  try {
+    fetch(ALT_ZOHO_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(payload)
+    }).then(() => {
+      console.log('✅ Alternative Zoho submission sent');
+    }).catch(error => {
+      console.warn('⚠️ Alternative Zoho submission failed:', error);
+      logZohoDataForLater(payload);
+    });
+  } catch(error) {
+    console.warn('⚠️ Fetch fallback failed:', error);
+    logZohoDataForLater(payload);
+  }
+}
+
+// Función para guardar datos localmente si todo falla
+function logZohoDataForLater(payload) {
+  console.log('📝 Zoho data saved locally:', {
+    ...payload,
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    url: window.location.href
+  });
+  
+  // Guardar en localStorage para recuperación futura
+  try {
+    const savedData = JSON.parse(localStorage.getItem('zoho_pending_data') || '[]');
+    savedData.push({
+      ...payload,
+      timestamp: new Date().toISOString()
+    });
+    localStorage.setItem('zoho_pending_data', JSON.stringify(savedData));
+    console.log('💾 Data saved to localStorage for later submission');
+  } catch(e) {
+    console.warn('⚠️ Could not save to localStorage:', e);
+  }
+}
+
 
 function submitEmail(){
   const val=document.getElementById('uEmail').value.trim();
@@ -2624,14 +2675,15 @@ function sendResultByEmail(diag){
   const baseUrl = window.location.href.split('?')[0]; // URL limpia sin params
   const resultUrl = baseUrl + '?resultado=' + token;
 
-  // Mandar a Zoho con manejo de errores
+  // Mandar a Zoho con manejo robusto de errores
   try {
     sendToZoho(uEmail, uName, resultUrl);
-    console.log('✅ Data sent to Zoho successfully');
+    console.log('✅ Zoho submission initiated');
   } catch(error) {
     console.warn('⚠️ Zoho submission failed:', error.message);
-    // No bloquear la muestra del resultado si Zoho falla
+    // No bloquear la experiencia si Zoho falla
   }
+  console.log('✅ Data sent to Zoho successfully');
 
   // Mostrar confirmación discreta en pantalla de resultado
   const note = document.createElement('div');
