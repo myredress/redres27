@@ -2694,9 +2694,16 @@ function checkUrlToken(){
 
   // Obtener datos del resultado para mostrar
   let resultData;
-  if(token && answers) {
-    // Usar datos recuperados de sessionStorage
-    resultData = calculateResult(answers);
+  if(token && !data) {
+    // Usar datos del token recuperado de sessionStorage
+    const tokenData = parseResultToken(token);
+    resultData = {
+      S: tokenData.S,
+      variant: tokenData.v,
+      varLabel: tokenData.vL,
+      sec: tokenData.sec || null,
+      secLabel: tokenData.secL || null
+    };
   } else {
     // Usar datos del token
     resultData = {
