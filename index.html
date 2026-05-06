@@ -2653,45 +2653,63 @@ function checkUrlToken(){
   let token = params.get('resultado');
   console.log('🎫 Token found:', token);
   
-  // Fallback: usar transactionId como resultado si está vacío
+  // Fallback: usar sessionStorage si resultado está vacío
   if(!token) {
-    const transactionId = params.get('transactionId');
-    const customId = params.get('custom_id');
-    const fallbackId = customId || transactionId;
-    console.log('🔄 Using fallback ID:', fallbackId);
+    console.log('🔄 Using sessionStorage fallback...');
     
-    if(fallbackId) {
-      // Intentar recuperar token desde localStorage usando ID
-      const savedToken = localStorage.getItem('redress_token_' + fallbackId);
-      if(savedToken) {
-        token = savedToken;
-        console.log('✅ Token recovered from localStorage:', token);
-      } else {
-        console.log('❌ No saved token found for ID:', fallbackId);
-        return;
-      }
+    // Recuperar datos directamente desde sessionStorage
+    const savedToken = sessionStorage.getItem('redress_test_token');
+    const savedName = sessionStorage.getItem('redress_test_name');
+    const savedHeight = sessionStorage.getItem('redress_test_height');
+    const savedAnswers = sessionStorage.getItem('redress_test_answers');
+    
+    if(savedToken) {
+      token = savedToken;
+      console.log('✅ Token recovered from sessionStorage:', token);
+      
+      // Restaurar datos directamente
+      if(savedName) uName = savedName;
+      if(savedHeight) uHeight = savedHeight;
+      if(savedAnswers) answers = JSON.parse(savedAnswers);
+      
+      // Limpiar sessionStorage después de recuperar
+      sessionStorage.removeItem('redress_test_token');
+      sessionStorage.removeItem('redress_test_name');
+      sessionStorage.removeItem('redress_test_height');
+      sessionStorage.removeItem('redress_test_answers');
+      console.log('🧹 SessionStorage cleaned');
     } else {
-      console.log('❌ No resultado token, transactionId or custom_id found in URL');
+      console.log('❌ No saved token found in sessionStorage');
       return;
     }
+  } else {
+    const data = parseResultToken(token);
+    if(!data) return;
+
+    // Restaurar datos del token
+    uName = data.n || '';
+    uHeight = data.h || '';
+    answers = data.a || {};
   }
 
-  const data = parseResultToken(token);
-  if(!data) return;
-
-  // Restaurar datos del token
-  uName = data.n || '';
-  uHeight = data.h || '';
-  answers = data.a || {};
+  // Obtener datos del resultado para mostrar
+  let resultData;
+  if(token && answers) {
+    // Usar datos recuperados de sessionStorage
+    resultData = calculateResult(answers);
+  } else {
+    // Usar datos del token
+    resultData = {
+      S: data.S,
+      variant: data.v,
+      varLabel: data.vL,
+      sec: data.sec || null,
+      secLabel: data.secL || null
+    };
+  }
 
   // Mostrar directamente el resultado sin pago (ya pagó)
-  window._d = {
-    S: data.S,
-    variant: data.v,
-    varLabel: data.vL,
-    sec: data.sec || null,
-    secLabel: data.secL || null
-  };
+  window._d = resultData;
 
   // Ir directo al resultado completo
   goTo('full-result');
@@ -2759,16 +2777,17 @@ function unlockResult(){
   // PRODUCCIÓN — descomenta esta línea y pon tu link de Square:
   // window.location.href = 'https://checkout.square.site/TU_LINK'
   
-  // Guardar token en localStorage con transactionId simulado
-  const mockTransactionId = 'redress_' + Date.now();
-  localStorage.setItem('redress_token_' + mockTransactionId, token);
-  console.log('💾 Token saved with ID:', mockTransactionId);
+  // Guardar token en sessionStorage para recuperación después del pago
+  sessionStorage.setItem('redress_test_token', token);
+  sessionStorage.setItem('redress_test_name', uName);
+  sessionStorage.setItem('redress_test_height', uHeight);
+  sessionStorage.setItem('redress_test_answers', JSON.stringify(answers));
+  console.log('💾 Token saved in sessionStorage:', token);
   
   // PRODUCCIÓN square index.html
   const squareUrl = 'https://square.link/u/dJiHh0f1'
      + '?ref=' + encodeURIComponent(uName)
-     + '&return_url=' + encodeURIComponent(window.location.href.split('?')[0]) 
-     + '&custom_id=' + mockTransactionId;
+     + '&return_url=' + encodeURIComponent(window.location.href.split('?')[0]);
   
   console.log('🛒 Square URL:', squareUrl);
   
